@@ -1,0 +1,12 @@
+[project]
+name = "copy-link"
+version = "0.2.0"
+description = "操作剪切板链接"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "pyqt6>=6.9.1",
+]
+
+[dependency-groups]
+dev = []
