@@ -523,11 +523,14 @@
             </section>
 
             <div class="button-group">
-                <button type="button" id="copyButton" class="button button-primary" data-tooltip="Cmd+Enter">
-                    📋 复制到剪切板
-                </button>
                 <button type="button" id="readButton" class="button button-secondary" data-tooltip="Cmd+V">
-                    📖 从剪切板读取
+                    粘贴链接
+                </button>
+                <button type="button" id="copyLinkButton" class="button button-primary" data-tooltip="Cmd+Enter">
+                    复制链接
+                </button>
+                <button type="button" id="copyMarkdownButton" class="button button-primary" data-tooltip="Shift+Cmd+Enter">
+                    复制 MD
                 </button>
             </div>
 
@@ -540,7 +543,8 @@
             constructor() {
                 this.nameInput = document.getElementById('linkName');
                 this.urlInput = document.getElementById('linkUrl');
-                this.copyButton = document.getElementById('copyButton');
+                this.copyLinkButton = document.getElementById('copyLinkButton');
+                this.copyMarkdownButton = document.getElementById('copyMarkdownButton');
                 this.readButton = document.getElementById('readButton');
                 this.messageContainer = document.getElementById('messageContainer');
                 
@@ -560,11 +564,15 @@
                 const cmdKey = isMac ? 'Cmd' : 'Ctrl';
                 
                 // 更新按钮的快速 tooltip
-                const copyButton = document.getElementById('copyButton');
+                const copyLinkButton = document.getElementById('copyLinkButton');
+                const copyMarkdownButton = document.getElementById('copyMarkdownButton');
                 const readButton = document.getElementById('readButton');
-                
-                if (copyButton) {
-                    copyButton.setAttribute('data-tooltip', `${cmdKey}+Enter`);
+
+                if (copyLinkButton) {
+                    copyLinkButton.setAttribute('data-tooltip', `${cmdKey}+Enter`);
+                }
+                if (copyMarkdownButton) {
+                    copyMarkdownButton.setAttribute('data-tooltip', `Shift+${cmdKey}+Enter`);
                 }
                 
                 if (readButton) {
@@ -574,7 +582,8 @@
 
             // 设置事件监听器
             setupEventListeners() {
-                this.copyButton.addEventListener('click', () => this.copyToClipboard());
+                this.copyLinkButton.addEventListener('click', () => this.copyToClipboard());
+                this.copyMarkdownButton.addEventListener('click', () => this.copyMarkdownToClipboard());
                 this.readButton.addEventListener('click', () => this.readFromClipboard());
                 
                 // 输入验证
@@ -587,12 +596,20 @@
                 
                 // 键盘快捷键
                 document.addEventListener('keydown', (e) => {
+                    // Ctrl+Enter
                     if (e.ctrlKey || e.metaKey) {
                         if (e.key === 'Enter') {
                             e.preventDefault();
                             this.copyToClipboard();
                         }
-                    }
+                    };
+                    // Shift+Ctrl+Enter
+                    if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.copyMarkdownToClipboard();
+                        }
+                    };
                 });
             }
 
@@ -638,8 +655,9 @@
                 const url = this.urlInput.value.trim();
                 
                 const isValid = name.length > 0 && this.isValidUrl(url);
-                this.copyButton.disabled = !isValid;
-                
+                this.copyLinkButton.disabled = !isValid;
+                this.copyMarkdownButton.disabled = !isValid;
+
                 return isValid;
             }
 
@@ -666,7 +684,7 @@
             }
 
             // 复制链接到剪切板
-            async copyToClipboard() {
+            async copyToClipboard(link_type = 'link') {
                 if (!this.validateForm()) {
                     this.showNotification('请填写完整且有效的信息', 'error');
                     return;
@@ -675,30 +693,51 @@
                 const name = this.nameInput.value.trim();
                 const url = this.urlInput.value.trim();
 
-                try {
-                    this.setButtonLoading(this.copyButton, true);
+                if (link_type === 'link'){
+                    var copy_button = this.copyLinkButton;
+                }
+                if (link_type === 'markdown') { 
+                    var copy_button = this.copyMarkdownButton;
+                }
+                
 
-                    // 创建HTML和纯文本格式
-                    const html = `<a href="${url}">${name}</a>`;
-                    const text = url;
+                try {
+                    this.setButtonLoading(copy_button, true);
+
+                    if (link_type === 'link') {
+                        // 创建HTML和纯文本格式
+                        const html = `<a href="${url}">${name}</a>`;
+                        const text = url;
+
+                        var clipboardItem = new ClipboardItem({
+                            'text/html': new Blob([html], { type: 'text/html' }),
+                            'text/plain': new Blob([text], { type: 'text/plain' })
+                        });
+                    } else {
+                        // Markdown格式
+                        const markdown = `[${name}](${url})`;
+
+                        var clipboardItem = new ClipboardItem({
+                            'text/plain': new Blob([markdown], { type: 'text/plain' })
+                        });
+                    }
 
                     // 写入剪切板
-                    const clipboardItem = new ClipboardItem({
-                        'text/html': new Blob([html], { type: 'text/html' }),
-                        'text/plain': new Blob([text], { type: 'text/plain' })
-                    });
-
                     await navigator.clipboard.write([clipboardItem]);
-                    
-                    this.setButtonSuccess(this.copyButton);
-                    // 优化：不再显示成功通知，只显示按钮内动画
+
+                    this.setButtonSuccess(copy_button);
                     
                 } catch (error) {
                     console.error('复制失败:', error);
                     this.showNotification('复制失败，请检查浏览器权限', 'error');
                 } finally {
-                    this.setButtonLoading(this.copyButton, false);
+                    this.setButtonLoading(copy_button, false);
                 }
+            }
+
+            // 复制Markdown格式到剪切板
+            async copyMarkdownToClipboard() {
+                await this.copyToClipboard('markdown');
             }
 
             // 从剪切板读取链接
