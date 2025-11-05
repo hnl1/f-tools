@@ -154,6 +154,27 @@
             margin-bottom: var(--space-6);
         }
 
+        /* 消息提示样式 */
+        .message-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .message-container.show {
+            opacity: 1;
+        }
+
         /* 简单直接的 tooltip 实现 */
         .button {
             flex: 1;
@@ -471,6 +492,7 @@
 </head>
 <body>
     <div class="container">
+        <div id="messageContainer" class="message-container"></div>
         <div class="main-card">
             <header class="header">
                 <h1>剪切板链接管理器</h1>
@@ -520,6 +542,7 @@
                 this.urlInput = document.getElementById('linkUrl');
                 this.copyButton = document.getElementById('copyButton');
                 this.readButton = document.getElementById('readButton');
+                this.messageContainer = document.getElementById('messageContainer');
                 
                 this.setupEventListeners();
                 this.checkClipboardSupport();
@@ -752,6 +775,19 @@
 
             // 填充表单
             fillForm(name, url) {
+                // 清理不可见字符
+                // 移除零宽字符、制表符、换行符、回车符等
+                const originalName = name;
+                const originalUrl = url;
+                
+                name = name.replace(/[\u200B-\u200D\uFEFF\t\n\r\s]+/g, '').trim();
+                url = url.replace(/[\u200B-\u200D\uFEFF\t\n\r]+/g, '').trim();
+                
+                // 检查是否移除了不可见字符
+                if (originalName !== name || originalUrl !== url) {
+                    this.showMessage('已自动清理不可见字符');
+                }
+                
                 this.nameInput.value = name;
                 this.urlInput.value = url;
                 this.validateForm();
@@ -763,6 +799,17 @@
                     this.nameInput.classList.remove('success');
                     this.urlInput.classList.remove('success');
                 }, 1200); // 优化：从2000ms减少到1200ms，提升响应速度
+            }
+
+            // 显示提示消息
+            showMessage(message) {
+                this.messageContainer.textContent = message;
+                this.messageContainer.classList.add('show');
+                
+                // 3秒后自动隐藏
+                setTimeout(() => {
+                    this.messageContainer.classList.remove('show');
+                }, 3000);
             }
 
             // 处理全局粘贴事件
