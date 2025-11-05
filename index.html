@@ -529,7 +529,7 @@
                 <button type="button" id="copyLinkButton" class="button button-primary" data-tooltip="Cmd+Enter">
                     复制链接
                 </button>
-                <button type="button" id="copyMarkdownButton" class="button button-primary" data-tooltip="Shift+Cmd+Enter">
+                <button type="button" id="copyMarkdownButton" class="button button-primary" data-tooltip="Cmd+Shift+Enter">
                     复制 MD
                 </button>
             </div>
@@ -572,7 +572,7 @@
                     copyLinkButton.setAttribute('data-tooltip', `${cmdKey}+Enter`);
                 }
                 if (copyMarkdownButton) {
-                    copyMarkdownButton.setAttribute('data-tooltip', `Shift+${cmdKey}+Enter`);
+                    copyMarkdownButton.setAttribute('data-tooltip', `${cmdKey}+Shift+Enter`);
                 }
                 
                 if (readButton) {
@@ -593,23 +593,19 @@
                 
                 // 全局粘贴监听
                 document.addEventListener('paste', (e) => this.handleGlobalPaste(e));
-                
+
                 // 键盘快捷键
                 document.addEventListener('keydown', (e) => {
-                    // Ctrl+Enter
-                    if (e.ctrlKey || e.metaKey) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        // Ctrl+Shift+Enter
+                        if (e.shiftKey) {
+                            this.copyMarkdownToClipboard();
+                        // Ctrl+Enter
+                        } else {
                             this.copyToClipboard();
                         }
-                    };
-                    // Shift+Ctrl+Enter
-                    if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            this.copyMarkdownToClipboard();
-                        }
-                    };
+                    }
                 });
             }
 
