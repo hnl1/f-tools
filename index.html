@@ -815,9 +815,8 @@
                 // 移除零宽字符、制表符、换行符、回车符等
                 const originalName = name;
                 const originalUrl = url;
-                
-                name = name.replace(/[\u200B-\u200D\uFEFF\t\n\r\s]+/g, '').trim();
-                url = url.replace(/[\u200B-\u200D\uFEFF\t\n\r]+/g, '').trim();
+                name = name.replace(/[\p{C}]/gu, '').trim();
+                url = url.replace(/[\p{C}]/gu, '').trim();
                 
                 // 检查是否移除了不可见字符
                 if (originalName !== name || originalUrl !== url) {
