@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>图片对比</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #1e1e1e;
+    color: #ddd;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    background: #252525;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+    flex: 0 0 auto;
+  }
+  header .back-link {
+    color: #888;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex: 0 0 auto;
+  }
+  header .back-link:hover {
+    color: #ddd;
+    background: #3a3a3a;
+  }
+  header .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  header label {
+    font-size: 12px;
+    color: #aaa;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+  header input[type="range"] {
+    width: 120px;
+  }
+  header button {
+    background: #3a3a3a;
+    color: #ddd;
+    border: 1px solid #555;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+  header button:hover { background: #4a4a4a; }
+
+  #drop-hint {
+    flex: 1 1 auto;
+    margin: 40px;
+    padding: 60px;
+    border: 2px dashed #555;
+    border-radius: 12px;
+    text-align: center;
+    color: #888;
+    font-size: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #drop-hint.dragging {
+    border-color: #4a9eff;
+    color: #4a9eff;
+    background: rgba(74, 158, 255, 0.05);
+  }
+  #drop-hint small {
+    display: block;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  #grid {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    gap: 0;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: stretch;
+    background: #1e1e1e;
+  }
+  .tile {
+    position: relative;
+    flex: 0 0 auto;
+    height: 100%;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+  .tile img.base {
+    display: block;
+    width: auto;
+    height: 100%;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .tile .label {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: rgba(0,0,0,0.7);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #fff;
+    pointer-events: none;
+    max-width: calc(100% - 40px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tile .remove {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .tile:hover .remove { opacity: 1; }
+  .tile .lens-rect {
+    position: absolute;
+    border: 1.5px solid rgba(255, 220, 0, 0.9);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+    pointer-events: none;
+    display: none;
+  }
+
+  /* Zoom panels strip - in-flow flex child below the grid */
+  #zoom-strip {
+    flex: 0 0 auto;
+    background: #1e1e1e;
+    padding: 0;
+    display: none;
+    gap: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+  #zoom-strip.active { display: flex; }
+  #zoom-resizer {
+    flex: 0 0 8px;
+    cursor: ns-resize;
+    background: #2a2a2a;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+    display: none;
+    position: relative;
+  }
+  #zoom-resizer.active { display: block; }
+  #zoom-resizer::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: #555;
+    transition: background 0.12s;
+  }
+  #zoom-resizer:hover::before,
+  body.resizing-zoom #zoom-resizer::before { background: #4a9eff; }
+  body.resizing-zoom { cursor: ns-resize; user-select: none; }
+  .zoom-panel {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+    transition: opacity 0.12s;
+  }
+  .zoom-panel:active { cursor: grabbing; }
+  .zoom-panel.drag-source { opacity: 0.4; }
+  .zoom-panel.drop-before { box-shadow: inset 3px 0 0 0 #4a9eff; }
+  .zoom-panel.drop-after  { box-shadow: inset -3px 0 0 0 #4a9eff; }
+  .zoom-panel canvas {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    display: block;
+  }
+  .zoom-panel .zlabel {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: rgba(0,0,0,0.7);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #fff;
+    pointer-events: none;
+  }
+
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-link">← 返回</a>
+  <h1>图片对比</h1>
+  <div class="controls">
+    <label title="取样区域占图片宽度的比例（与各图分辨率无关，对应内容上的同一块区域）">
+      取样区域
+      <input type="range" id="region-frac" min="5" max="50" step="5" value="25">
+      <span id="region-frac-value">25%</span>
+    </label>
+    <button id="clear-btn">清空</button>
+    <button id="add-btn">添加图片</button>
+    <input type="file" id="file-input" accept="image/*" multiple style="display:none">
+  </div>
+</header>
+
+<div id="drop-hint">
+  拖拽图片到此处
+  <small>支持多张图片，按文件名排序后平铺；鼠标在任一张图上移动时，所有图片对应位置会同步放大显示在底部</small>
+</div>
+
+<div id="grid"></div>
+
+<div id="zoom-resizer" title="拖动调整放大面板大小"></div>
+<div id="zoom-strip"></div>
+
+<script>
+(() => {
+  const grid = document.getElementById('grid');
+  const dropHint = document.getElementById('drop-hint');
+  const zoomStrip = document.getElementById('zoom-strip');
+  const regionFracInput = document.getElementById('region-frac');
+  const regionFracValueLabel = document.getElementById('region-frac-value');
+  const zoomResizer = document.getElementById('zoom-resizer');
+  const clearBtn = document.getElementById('clear-btn');
+  const addBtn = document.getElementById('add-btn');
+  const fileInput = document.getElementById('file-input');
+
+  /** @type {{name:string, img:HTMLImageElement, tile:HTMLElement, lens:HTMLElement, canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D, panel:HTMLElement}[]} */
+  let items = [];
+
+  let regionFrac = parseFloat(regionFracInput.value) / 100; // 0..1 fraction of image width
+  let panelPx = 360; // panel CSS size on screen, controlled by drag handle
+
+  sizeZoomPanels();
+
+  regionFracInput.addEventListener('input', () => {
+    regionFrac = parseFloat(regionFracInput.value) / 100;
+    regionFracValueLabel.textContent = regionFracInput.value + '%';
+    sizeZoomPanels();
+    if (curU != null) updateAll();
+  });
+
+  // Drag the divider between top grid and bottom strip to resize zoom panels
+  zoomResizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.body.classList.add('resizing-zoom');
+    const startY = e.clientY;
+    const startPx = panelPx;
+    const onMove = (ev) => {
+      const dy = startY - ev.clientY;
+      let p = Math.round(startPx + dy);
+      if (p < 80) p = 80;
+      const maxP = Math.max(120, window.innerHeight - 120);
+      if (p > maxP) p = maxP;
+      panelPx = p;
+      sizeZoomPanels();
+      if (curU != null) updateAll();
+    };
+    const onUp = () => {
+      document.body.classList.remove('resizing-zoom');
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+
+  clearBtn.addEventListener('click', () => clearAll());
+  addBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files.length) {
+      handleFiles(Array.from(e.target.files));
+      fileInput.value = '';
+    }
+  });
+
+  // Drag & drop (files from OS only - ignore internal panel-reorder drags)
+  function isFileDrag(e) {
+    const types = e.dataTransfer && e.dataTransfer.types;
+    if (!types) return false;
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true;
+    }
+    return false;
+  }
+  ['dragenter', 'dragover'].forEach(ev => {
+    window.addEventListener(ev, (e) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      dropHint.classList.add('dragging');
+    });
+  });
+  ['dragleave', 'drop'].forEach(ev => {
+    window.addEventListener(ev, (e) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      if (ev === 'dragleave' && e.relatedTarget) return;
+      dropHint.classList.remove('dragging');
+    });
+  });
+  window.addEventListener('drop', (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    if (files.length) handleFiles(files);
+  });
+
+  function clearAll() {
+    items.forEach(it => URL.revokeObjectURL(it.url));
+    items = [];
+    grid.innerHTML = '';
+    zoomStrip.innerHTML = '';
+    zoomStrip.classList.remove('active');
+    zoomResizer.classList.remove('active');
+    document.body.classList.remove('has-zoom');
+    dropHint.style.display = '';
+  }
+
+  async function handleFiles(files) {
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    for (const f of files) {
+      await addImage(f.name, f);
+    }
+    layoutGrid();
+    buildZoomPanels();
+    dropHint.style.display = items.length ? 'none' : '';
+  }
+
+  function addImage(name, blob) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+
+        const baseImg = document.createElement('img');
+        baseImg.className = 'base';
+        baseImg.src = url;
+        baseImg.draggable = false;
+        tile.appendChild(baseImg);
+
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = `${name}  ·  ${img.naturalWidth}×${img.naturalHeight}`;
+        tile.appendChild(label);
+
+        const lens = document.createElement('div');
+        lens.className = 'lens-rect';
+        tile.appendChild(lens);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove';
+        removeBtn.textContent = '×';
+        removeBtn.title = '移除';
+        removeBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          removeItem(item);
+        });
+        tile.appendChild(removeBtn);
+
+        grid.appendChild(tile);
+
+        const item = { name, url, blob, img, tile, baseImg, lens, label };
+        items.push(item);
+
+        tile.addEventListener('mousemove', (e) => onTileMove(e, item));
+        tile.addEventListener('mouseleave', onTileLeave);
+        tile.addEventListener('mouseenter', () => {
+          if (items.length) {
+            zoomStrip.classList.add('active');
+            zoomResizer.classList.add('active');
+            document.body.classList.add('has-zoom');
+          }
+        });
+
+        resolve();
+      };
+      img.onerror = () => resolve();
+      img.src = url;
+    });
+  }
+
+  function removeItem(item) {
+    URL.revokeObjectURL(item.url);
+    items = items.filter(i => i !== item);
+    item.tile.remove();
+    layoutGrid();
+    buildZoomPanels();
+    if (items.length === 0) {
+      dropHint.style.display = '';
+      zoomStrip.classList.remove('active');
+      zoomResizer.classList.remove('active');
+      document.body.classList.remove('has-zoom');
+    }
+  }
+
+  function layoutGrid() {
+    // Tiles are flex items in a horizontally scrolling row; layout is handled by CSS.
+  }
+
+  function buildZoomPanels() {
+    zoomStrip.innerHTML = '';
+    items.forEach((item, idx) => {
+      const panel = document.createElement('div');
+      panel.className = 'zoom-panel';
+      panel.draggable = true;
+      panel.dataset.idx = String(idx);
+      const canvas = document.createElement('canvas');
+      const zlabel = document.createElement('div');
+      zlabel.className = 'zlabel';
+      zlabel.textContent = `${item.name}  ·  ${item.img.naturalWidth}×${item.img.naturalHeight}`;
+      panel.appendChild(canvas);
+      panel.appendChild(zlabel);
+      zoomStrip.appendChild(panel);
+      item.panel = panel;
+      item.canvas = canvas;
+      item.ctx = canvas.getContext('2d');
+
+      attachReorderHandlers(panel, item);
+    });
+    sizeZoomPanels();
+  }
+
+  let dragSrcItem = null;
+
+  function attachReorderHandlers(panel, item) {
+    panel.addEventListener('dragstart', (e) => {
+      dragSrcItem = item;
+      panel.classList.add('drag-source');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        // Required for Firefox to start the drag
+        try { e.dataTransfer.setData('application/x-panel-reorder', item.name); } catch (_) {}
+      }
+    });
+    panel.addEventListener('dragend', () => {
+      dragSrcItem = null;
+      panel.classList.remove('drag-source');
+      clearDropMarkers();
+    });
+    panel.addEventListener('dragover', (e) => {
+      if (!dragSrcItem || dragSrcItem === item) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      const rect = panel.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      clearDropMarkers();
+      panel.classList.add(before ? 'drop-before' : 'drop-after');
+    });
+    panel.addEventListener('dragleave', () => {
+      panel.classList.remove('drop-before', 'drop-after');
+    });
+    panel.addEventListener('drop', (e) => {
+      if (!dragSrcItem || dragSrcItem === item) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = panel.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      reorderItem(dragSrcItem, item, before);
+      clearDropMarkers();
+    });
+  }
+
+  function clearDropMarkers() {
+    document.querySelectorAll('.zoom-panel.drop-before, .zoom-panel.drop-after')
+      .forEach(el => el.classList.remove('drop-before', 'drop-after'));
+  }
+
+  function reorderItem(src, target, before) {
+    const fromIdx = items.indexOf(src);
+    if (fromIdx < 0) return;
+    items.splice(fromIdx, 1);
+    let toIdx = items.indexOf(target);
+    if (toIdx < 0) return;
+    if (!before) toIdx += 1;
+    items.splice(toIdx, 0, src);
+    items.forEach(it => grid.appendChild(it.tile));
+    buildZoomPanels();
+    if (curU != null) updateAll();
+  }
+
+  function sizeZoomPanels() {
+    if (!items.length) return;
+    // Strip is full-width, panels share the width equally; each panel is panelW × panelH.
+    const stripWidth = zoomStrip.clientWidth || window.innerWidth;
+    const panelW = Math.max(20, Math.floor(stripWidth / items.length));
+    const panelH = panelPx;
+    // Square canvas covers the panel slot (object-fit: cover behaviour); the smaller side gets cropped from center.
+    const canvasCssSide = Math.max(panelW, panelH);
+    zoomStrip.style.height = panelH + 'px';
+    items.forEach(item => {
+      if (!item.canvas) return;
+      // Per-image source pixels: same content fraction across all images
+      const srcSidePx = Math.max(2, Math.round(regionFrac * item.img.naturalWidth));
+      item.canvas.width = srcSidePx;
+      item.canvas.height = srcSidePx;
+      item.canvas.style.width = canvasCssSide + 'px';
+      item.canvas.style.height = canvasCssSide + 'px';
+      item.srcSidePx = srcSidePx;
+    });
+  }
+
+  // Source-image normalized coordinate (0..1) currently being looked at
+  let curU = null, curV = null;
+
+  function onTileMove(e, item) {
+    const rect = item.baseImg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return;
+    curU = x / rect.width;
+    curV = y / rect.height;
+    updateAll();
+  }
+
+  function onTileLeave() {
+    curU = curV = null;
+    items.forEach(it => { if (it.lens) it.lens.style.display = 'none'; });
+  }
+
+  function updateAll() {
+    if (curU == null || curV == null) return;
+    items.forEach(it => {
+      drawZoom(it);
+      drawLens(it);
+    });
+  }
+
+  function drawLens(item) {
+    const rect = item.baseImg.getBoundingClientRect();
+    const tileRect = item.tile.getBoundingClientRect();
+    // Lens box covers the same content fraction on every tile (CSS px = frac × displayed width).
+    const cssBox = Math.max(4, regionFrac * rect.width);
+    const cx = curU * rect.width + (rect.left - tileRect.left);
+    const cy = curV * rect.height + (rect.top - tileRect.top);
+    item.lens.style.display = 'block';
+    item.lens.style.width = cssBox + 'px';
+    item.lens.style.height = cssBox + 'px';
+    item.lens.style.left = (cx - cssBox / 2) + 'px';
+    item.lens.style.top = (cy - cssBox / 2) + 'px';
+  }
+
+  function drawZoom(item) {
+    const ctx = item.ctx;
+    if (!ctx) return;
+    const canvas = item.canvas;
+    const img = item.img;
+    // Sample directly in source-pixel space, decoupled from the on-screen size of the upper image.
+    const srcRectSize = canvas.width; // already sized to source-pixels per side
+    const sx = curU * img.naturalWidth - srcRectSize / 2;
+    const sy = curV * img.naturalHeight - srcRectSize / 2;
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(
+      img,
+      sx, sy, srcRectSize, srcRectSize,
+      0, 0, canvas.width, canvas.height
+    );
+  }
+
+  // Re-layout zoom on resize
+  window.addEventListener('resize', () => {
+    sizeZoomPanels();
+    if (curU != null) updateAll();
+  });
+})();
+</script>
+</body>
+</html>

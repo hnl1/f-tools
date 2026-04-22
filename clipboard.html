@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剪切板链接管理器</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>">
+    <style>
+        :root {
+            /* 主色调 - 现代蓝 */
+            --primary-50: #eff6ff;
+            --primary-500: #3b82f6;
+            --primary-600: #2563eb;
+            --primary-700: #1d4ed8;
+            
+            /* 中性色 - 现代灰 */
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-500: #64748b;
+            --gray-700: #334155;
+            --gray-900: #0f172a;
+            
+            /* 语义色彩 */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #06b6d4;
+            
+            /* 字体和间距 */
+            --text-xs: 0.75rem;
+            --text-sm: 0.875rem;
+            --text-base: 1rem;
+            --text-lg: 1.125rem;
+            --text-xl: 1.25rem;
+            --text-2xl: 1.5rem;
+            --text-3xl: 1.875rem;
+            
+            --space-1: 0.25rem;
+            --space-2: 0.5rem;
+            --space-3: 0.75rem;
+            --space-4: 1rem;
+            --space-6: 1.5rem;
+            --space-8: 2rem;
+            --space-12: 3rem;
+            --space-16: 4rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: var(--gray-900);
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--primary-50) 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-4);
+        }
+
+        .main-card {
+            width: 100%;
+            max-width: 480px;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--gray-200);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 32px;
+            transition: all 0.2s ease;
+        }
+
+        .main-card:hover {
+            box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-8);
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            color: var(--gray-500);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .back-link:hover {
+            color: var(--primary-600);
+            background: var(--gray-100);
+        }
+
+        .header h1 {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: var(--space-2);
+            background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: var(--text-base);
+            color: var(--gray-500);
+        }
+
+        .form-section {
+            margin-bottom: var(--space-8);
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: var(--space-6);
+        }
+
+        .input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            font-size: var(--text-base);
+            transition: all 0.2s ease;
+            background: var(--gray-50);
+            outline: none;
+        }
+
+        .input:focus {
+            border-color: var(--primary-500);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .input.error {
+            border-color: var(--error);
+            background: rgba(239, 68, 68, 0.05);
+            animation: shake 0.4s ease-in-out;
+        }
+
+        .input.success {
+            border-color: var(--success);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: var(--space-2);
+        }
+
+        .button-group {
+            display: flex;
+            gap: var(--space-4);
+            margin-bottom: var(--space-6);
+        }
+
+        /* 消息提示样式 */
+        .message-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .message-container.show {
+            opacity: 1;
+        }
+
+        /* 简单直接的 tooltip 实现 */
+        .button {
+            flex: 1;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: var(--text-sm);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+            position: relative;
+            overflow: visible;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+        }
+
+        /* 现代化 tooltip 样式 - 强制优先级 */
+        .button:not(.success):not(.loading)::after {
+            content: attr(data-tooltip) !important;
+            position: absolute !important;
+            top: -42px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(8px) !important;
+            color: var(--gray-700) !important;
+            padding: 8px 12px !important;
+            border-radius: 8px !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            white-space: nowrap !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transition: opacity 0.2s ease, transform 0.2s ease !important;
+            pointer-events: none !important;
+            z-index: 9999 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+            letter-spacing: 0.3px !important;
+            border: 1px solid rgba(0, 0, 0, 0.1) !important;
+            line-height: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+        /* 小三角形指示器 - 强制优先级 */
+        .button::before {
+            content: '' !important;
+            position: absolute !important;
+            top: -8px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 0 !important;
+            height: 0 !important;
+            border-left: 5px solid transparent !important;
+            border-right: 5px solid transparent !important;
+            border-top: 5px solid rgba(255, 255, 255, 0.95) !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            transition: opacity 0.2s ease !important;
+            pointer-events: none !important;
+            z-index: 9998 !important;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1)) !important;
+        }
+
+        .button:hover:not(.success):not(.loading)::after,
+        .button:hover:not(.success):not(.loading)::before {
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        .button:hover:not(.success):not(.loading)::after {
+            transform: translateX(-50%) translateY(-2px) !important;
+        }
+
+
+
+
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            color: white;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.3);
+        }
+
+        .button-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.4);
+        }
+
+        .button-secondary {
+            background: white;
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+        }
+
+        .button-secondary:hover:not(:disabled) {
+            background: var(--gray-50);
+            border-color: var(--gray-300);
+        }
+
+        .button.loading {
+            color: transparent;
+        }
+
+        .notification {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            max-width: 400px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        /* 只保留错误、警告和信息通知样式 */
+        .notification.error {
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+        }
+
+        .notification.warning {
+            background: rgba(245, 158, 11, 0.9);
+            color: white;
+        }
+
+        .notification.info {
+            background: rgba(6, 182, 212, 0.9);
+            color: white;
+        }
+
+        /* 成功浮层效果 */
+        .success-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 50px; /* 限制宿度，只占据按钮前部 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+            animation: successOverlay 0.6s ease-out;
+        }
+
+        .success-overlay .checkmark {
+            color: #10b981;
+            font-size: 32px; /* 从48px缩小到40px */
+            font-weight: bold;
+            opacity: 1; /* 去除透明度，完全不透明 */
+            animation: checkmarkBounce 0.6s ease-out;
+        }
+
+        @keyframes successOverlay {
+            0% {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes checkmarkBounce {
+            0% {
+                transform: scale(0) rotate(-90deg);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.3) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        /* loading 动画使用不同的伪元素 */
+        .button.loading .loading-spinner {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+
+
+        /* loading 状态下隐藏 tooltip 和成功动画 */
+        .button.loading::after,
+        .button.loading::before {
+            display: none !important;
+        }
+
+
+        /* 动画关键帧 */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+
+        @keyframes checkmark {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                align-items: flex-start;
+                padding-top: var(--space-8);
+            }
+            
+            .main-card {
+                max-width: 100%;
+                margin: 0;
+                padding: 24px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+                gap: var(--space-3);
+            }
+            
+            .button {
+                width: 100%;
+                padding: var(--space-4) var(--space-6);
+                font-size: var(--text-base);
+            }
+
+            .header h1 {
+                font-size: var(--text-2xl);
+            }
+        }
+
+        /* 无障碍设计 */
+        @media (prefers-contrast: high) {
+            .input {
+                border-width: 3px;
+            }
+            
+            .button {
+                border: 2px solid transparent;
+            }
+            
+            .button-primary {
+                border-color: var(--primary-700);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        .button:focus-visible,
+        .input:focus-visible {
+            outline: 3px solid var(--primary-500);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="messageContainer" class="message-container"></div>
+        <div class="main-card">
+            <header class="header">
+                <a href="index.html" class="back-link">← 返回</a>
+                <h1>剪切板链接管理器</h1>
+                <p>轻松管理您的链接，支持富文本和纯文本格式</p>
+            </header>
+
+            <section class="form-section">
+                <div class="input-group">
+                    <label class="label" for="linkName">链接名称</label>
+                    <input 
+                        type="text" 
+                        id="linkName" 
+                        class="input" 
+                        placeholder="输入链接的显示名称"
+                        maxlength="100"
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label class="label" for="linkUrl">链接地址</label>
+                    <input 
+                        type="url" 
+                        id="linkUrl" 
+                        class="input" 
+                        placeholder="https://example.com"
+                    >
+                </div>
+            </section>
+
+            <div class="button-group">
+                <button type="button" id="readButton" class="button button-secondary" data-tooltip="Cmd+V">
+                    粘贴链接
+                </button>
+                <button type="button" id="copyLinkButton" class="button button-primary" data-tooltip="Cmd+Enter">
+                    复制链接
+                </button>
+                <button type="button" id="copyMarkdownButton" class="button button-primary" data-tooltip="Cmd+Shift+Enter">
+                    复制 MD
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 极简剪切板链接管理器
+        class ClipboardLinkManager {
+            constructor() {
+                this.nameInput = document.getElementById('linkName');
+                this.urlInput = document.getElementById('linkUrl');
+                this.copyLinkButton = document.getElementById('copyLinkButton');
+                this.copyMarkdownButton = document.getElementById('copyMarkdownButton');
+                this.readButton = document.getElementById('readButton');
+                this.messageContainer = document.getElementById('messageContainer');
+                
+                this.setupEventListeners();
+                this.checkClipboardSupport();
+                this.updateShortcutKeys();
+                
+                // 初始化时验证表单，确保按钮状态一致
+                this.validateForm();
+            }
+            
+            // 检测操作系统并更新快捷键显示
+            updateShortcutKeys() {
+                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 || 
+                             navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+                
+                const cmdKey = isMac ? 'Cmd' : 'Ctrl';
+                
+                // 更新按钮的快速 tooltip
+                const copyLinkButton = document.getElementById('copyLinkButton');
+                const copyMarkdownButton = document.getElementById('copyMarkdownButton');
+                const readButton = document.getElementById('readButton');
+
+                if (copyLinkButton) {
+                    copyLinkButton.setAttribute('data-tooltip', `${cmdKey}+Enter`);
+                }
+                if (copyMarkdownButton) {
+                    copyMarkdownButton.setAttribute('data-tooltip', `${cmdKey}+Shift+Enter`);
+                }
+                
+                if (readButton) {
+                    readButton.setAttribute('data-tooltip', `${cmdKey}+V`);
+                }
+            }
+
+            // 设置事件监听器
+            setupEventListeners() {
+                this.copyLinkButton.addEventListener('click', () => this.copyToClipboard());
+                this.copyMarkdownButton.addEventListener('click', () => this.copyMarkdownToClipboard());
+                this.readButton.addEventListener('click', () => this.readFromClipboard());
+                
+                // 输入验证
+                this.nameInput.addEventListener('input', () => this.validateForm());
+                this.urlInput.addEventListener('input', () => this.validateForm());
+                this.urlInput.addEventListener('blur', () => this.validateUrl());
+                
+                // 全局粘贴监听
+                document.addEventListener('paste', (e) => this.handleGlobalPaste(e));
+
+                // 键盘快捷键
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        // Ctrl+Shift+Enter
+                        if (e.shiftKey) {
+                            this.copyMarkdownToClipboard();
+                        // Ctrl+Enter
+                        } else {
+                            this.copyToClipboard();
+                        }
+                    }
+                });
+            }
+
+            // 检查剪切板API支持
+            checkClipboardSupport() {
+                if (!navigator.clipboard) {
+                    this.showNotification('您的浏览器不支持剪切板API，请使用现代浏览器', 'warning');
+                    this.readButton.disabled = true;
+                    return;
+                }
+                
+                // 检查是否在安全上下文中
+                if (!window.isSecureContext && location.protocol !== 'file:') {
+                    this.showNotification('剪切板API需要HTTPS或本地文件环境', 'warning');
+                    this.readButton.disabled = true;
+                    return;
+                }
+                
+                // 测试剪切板读取权限
+                this.testClipboardPermissions();
+            }
+            
+            // 测试剪切板权限
+            async testClipboardPermissions() {
+                try {
+                    // 尝试读取权限状态
+                    if (navigator.permissions) {
+                        const permission = await navigator.permissions.query({name: 'clipboard-read'});
+                        if (permission.state === 'denied') {
+                            this.showNotification('剪切板读取权限被拒绝，请在浏览器设置中允许', 'warning');
+                            this.readButton.disabled = true;
+                        }
+                    }
+                } catch (error) {
+                    // 在file://协议下，权限API可能不可用，这是正常的
+                    console.log('权限检查不可用，将在实际使用时处理');
+                }
+            }
+
+            // 验证表单
+            validateForm() {
+                const name = this.nameInput.value.trim();
+                const url = this.urlInput.value.trim();
+                
+                const isValid = name.length > 0 && this.isValidUrl(url);
+                this.copyLinkButton.disabled = !isValid;
+                this.copyMarkdownButton.disabled = !isValid;
+
+                return isValid;
+            }
+
+            // 验证URL格式
+            validateUrl() {
+                const url = this.urlInput.value.trim();
+                if (url && !this.isValidUrl(url)) {
+                    this.urlInput.classList.add('error');
+                    this.showNotification('请输入有效的HTTP或HTTPS网址', 'error');
+                } else {
+                    this.urlInput.classList.remove('error');
+                    if (url) this.urlInput.classList.add('success');
+                }
+            }
+
+            // URL有效性检查
+            isValidUrl(url) {
+                try {
+                    const urlObj = new URL(url);
+                    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+                } catch {
+                    return false;
+                }
+            }
+
+            // 复制链接到剪切板
+            async copyToClipboard(link_type = 'link') {
+                if (!this.validateForm()) {
+                    this.showNotification('请填写完整且有效的信息', 'error');
+                    return;
+                }
+
+                const name = this.nameInput.value.trim();
+                const url = this.urlInput.value.trim();
+
+                if (link_type === 'link'){
+                    var copy_button = this.copyLinkButton;
+                }
+                if (link_type === 'markdown') { 
+                    var copy_button = this.copyMarkdownButton;
+                }
+                
+
+                try {
+                    this.setButtonLoading(copy_button, true);
+
+                    if (link_type === 'link') {
+                        // 创建HTML和纯文本格式
+                        const html = `<a href="${url}">${name}</a>`;
+                        const text = url;
+
+                        var clipboardItem = new ClipboardItem({
+                            'text/html': new Blob([html], { type: 'text/html' }),
+                            'text/plain': new Blob([text], { type: 'text/plain' })
+                        });
+                    } else {
+                        // Markdown格式
+                        const markdown = `[${name}](${url})`;
+
+                        var clipboardItem = new ClipboardItem({
+                            'text/plain': new Blob([markdown], { type: 'text/plain' })
+                        });
+                    }
+
+                    // 写入剪切板
+                    await navigator.clipboard.write([clipboardItem]);
+
+                    this.setButtonSuccess(copy_button);
+                    
+                } catch (error) {
+                    console.error('复制失败:', error);
+                    this.showNotification('复制失败，请检查浏览器权限', 'error');
+                } finally {
+                    this.setButtonLoading(copy_button, false);
+                }
+            }
+
+            // 复制Markdown格式到剪切板
+            async copyMarkdownToClipboard() {
+                await this.copyToClipboard('markdown');
+            }
+
+            // 从剪切板读取链接
+            async readFromClipboard() {
+                try {
+                    this.setButtonLoading(this.readButton, true);
+
+                    // 先检查API支持
+                    if (!navigator.clipboard || !navigator.clipboard.read) {
+                        throw new Error('浏览器不支持剪切板读取API');
+                    }
+
+                    const clipboardItems = await navigator.clipboard.read();
+                    let foundLink = false;
+
+                    for (const item of clipboardItems) {
+                        // 优先尝试读取HTML格式
+                        if (item.types.includes('text/html')) {
+                            try {
+                                const htmlBlob = await item.getType('text/html');
+                                const html = await htmlBlob.text();
+                                
+                                const linkMatch = html.match(/<a[^>]+href=["']([^"']*?)["'][^>]*>([^<]*)<\/a>/i);
+                                if (linkMatch) {
+                                    const [, url, name] = linkMatch;
+                                    this.fillForm(name.trim(), url.trim());
+                                    foundLink = true;
+                                    break;
+                                }
+                            } catch (htmlError) {
+                                console.log('HTML格式读取失败:', htmlError);
+                            }
+                        }
+                        
+                        // 回退到纯文本格式
+                        if (item.types.includes('text/plain')) {
+                            try {
+                                const textBlob = await item.getType('text/plain');
+                                const text = await textBlob.text().trim();
+                                
+                                if (this.isValidUrl(text)) {
+                                    this.fillForm(text, text);
+                                    foundLink = true;
+                                    break;
+                                }
+                            } catch (textError) {
+                                console.log('文本格式读取失败:', textError);
+                            }
+                        }
+                    }
+
+                    if (foundLink) {
+                        this.setButtonSuccess(this.readButton);
+                        // 优化：不再显示成功通知，只显示按钮内动画
+                    } else {
+                        this.showNotification('剪切板中未找到有效链接', 'warning');
+                    }
+
+                } catch (error) {
+                    console.error('读取失败:', error);
+                    
+                    // 根据错误类型提供不同的提示
+                    if (error.name === 'NotAllowedError') {
+                        this.showNotification('剪切板访问被拒绝，请在浏览器设置中允许剪切板访问权限', 'error');
+                    } else if (error.name === 'NotSupportedError') {
+                        this.showNotification('当前环境不支持剪切板读取，请尝试使用HTTPS或现代浏览器', 'error');
+                    } else {
+                        this.showNotification('读取失败，请检查浏览器权限或尝试手动点击读取按钮', 'error');
+                    }
+                } finally {
+                    this.setButtonLoading(this.readButton, false);
+                }
+            }
+
+            // 填充表单
+            fillForm(name, url) {
+                // 清理不可见字符
+                // 移除零宽字符、制表符、换行符、回车符等
+                const originalName = name;
+                const originalUrl = url;
+                name = name.replace(/[\p{C}]/gu, '').trim();
+                url = url.replace(/[\p{C}]/gu, '').trim();
+                
+                // 检查是否移除了不可见字符
+                if (originalName !== name || originalUrl !== url) {
+                    this.showMessage('已自动清理不可见字符');
+                }
+                
+                this.nameInput.value = name;
+                this.urlInput.value = url;
+                this.validateForm();
+                
+                // 添加成功样式
+                this.nameInput.classList.add('success');
+                this.urlInput.classList.add('success');
+                setTimeout(() => {
+                    this.nameInput.classList.remove('success');
+                    this.urlInput.classList.remove('success');
+                }, 1200); // 优化：从2000ms减少到1200ms，提升响应速度
+            }
+
+            // 显示提示消息
+            showMessage(message) {
+                this.messageContainer.textContent = message;
+                this.messageContainer.classList.add('show');
+                
+                // 3秒后自动隐藏
+                setTimeout(() => {
+                    this.messageContainer.classList.remove('show');
+                }, 3000);
+            }
+
+            // 处理全局粘贴事件
+            async handleGlobalPaste(event) {
+                // 跳过输入框内的粘贴
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+
+                // 检查是否在支持的环境中
+                if (!navigator.clipboard || !navigator.clipboard.read) {
+                    this.showNotification('当前环境不支持自动粘贴检测，请手动点击读取按钮', 'info');
+                    return;
+                }
+
+                try {
+                    event.preventDefault();
+                    
+                    // 尝试从事件中获取粘贴数据
+                    const clipboardData = event.clipboardData;
+                    if (clipboardData) {
+                        // 优先使用事件中的数据
+                        const htmlData = clipboardData.getData('text/html');
+                        const textData = clipboardData.getData('text/plain');
+                        
+                        let foundLink = false;
+                        
+                        // 尝试解析HTML数据
+                        if (htmlData) {
+                            const linkMatch = htmlData.match(/<a[^>]+href=["']([^"']*?)["'][^>]*>([^<]*)<\/a>/i);
+                            if (linkMatch) {
+                                const [, url, name] = linkMatch;
+                                this.fillForm(name.trim(), url.trim());
+                                this.setButtonSuccess(this.readButton); // 添加缺失的成功反馈
+                                foundLink = true;
+                            }
+                        }
+                        
+                        // 如果没有找到HTML链接，尝试纯文本
+                        if (!foundLink && textData && this.isValidUrl(textData.trim())) {
+                            this.fillForm(textData.trim(), textData.trim());
+                            this.setButtonSuccess(this.readButton); // 添加缺失的成功反馈
+                            foundLink = true;
+                        }
+                        
+                        if (foundLink) {
+                            return;
+                        }
+                    }
+                    
+                    // 如果事件数据不可用，尝试使用Clipboard API
+                    await this.readFromClipboard();
+                    
+                } catch (error) {
+                    console.log('全局粘贴处理失败:', error);
+                    // 不显示错误消息，因为这只是一个便民功能
+                }
+            }
+
+            // 设置按钮加载状态
+            setButtonLoading(button, loading) {
+                if (loading) {
+                    button.classList.add('loading');
+                    button.disabled = true;
+                    // 添加 loading 图标
+                    const spinner = document.createElement('div');
+                    spinner.className = 'loading-spinner';
+                    button.appendChild(spinner);
+                } else {
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                    // 移除 loading 图标
+                    const spinner = button.querySelector('.loading-spinner');
+                    if (spinner) {
+                        spinner.remove();
+                    }
+                    // 保持按钮状态一致，不重新验证表单
+                    // this.validateForm(); // 移除这行，避免状态不一致
+                }
+            }
+
+            // 设置按钮成功状态 - 透明浮层大对勾效果
+            setButtonSuccess(button) {
+                // 检查是否已经有成功状态，避免重复添加
+                if (button.dataset.successActive === 'true') {
+                    return;
+                }
+                
+                button.dataset.successActive = 'true';
+                
+                // 创建透明浮层
+                const overlay = document.createElement('div');
+                overlay.className = 'success-overlay';
+                overlay.innerHTML = '<div class="checkmark">✓</div>';
+                
+                // 添加浮层到按钮
+                button.appendChild(overlay);
+                
+                setTimeout(() => {
+                    // 移除浮层并清除成功状态
+                    if (overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                    button.dataset.successActive = 'false';
+                }, 1200);
+            }
+
+            // 显示通知
+            showNotification(message, type = 'info') {
+                // 移除现有通知
+                const existingNotification = document.querySelector('.notification');
+                if (existingNotification) {
+                    existingNotification.remove();
+                }
+
+                // 创建新通知
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                // 显示动画
+                setTimeout(() => notification.classList.add('show'), 10);
+                
+                // 自动隐藏
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                }, 1200); // 统一：与按钮和输入框成功状态保持一致的1200ms
+            }
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            new ClipboardLinkManager();
+        });
+    </script>
+</body>
+</html>

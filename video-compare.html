@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>视频对比</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #111;
+        color: #eee;
+        font: 14px/1.4 -apple-system, "PingFang SC", system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      body.dragging {
+        outline: 3px dashed #4aa3ff;
+        outline-offset: -8px;
+        background: #142033;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        flex-shrink: 0;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0;
+        font-weight: 500;
+      }
+      .hint {
+        color: #888;
+        font-size: 12px;
+      }
+      .controls {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+      }
+      .back-link {
+        color: #888;
+        text-decoration: none;
+        font-size: 13px;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+      .back-link:hover {
+        color: #eee;
+        background: #2a2a2a;
+      }
+      button {
+        background: #2a2a2a;
+        color: #eee;
+        border: 1px solid #444;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      button:hover {
+        background: #3a3a3a;
+      }
+      button.danger {
+        border-color: #663030;
+        color: #ff8a8a;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+        flex: 1;
+        min-height: 0;
+      }
+      .cell {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 6px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+      }
+      .cell .title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        font-weight: 500;
+        background: #222;
+        border-bottom: 1px solid #333;
+        font-size: 13px;
+        flex-shrink: 0;
+        cursor: grab;
+        user-select: none;
+      }
+      .cell .title:active {
+        cursor: grabbing;
+      }
+      .cell.dragging-cell {
+        opacity: 0.4;
+      }
+      .cell.drag-over-left {
+        box-shadow: -3px 0 0 0 #4aa3ff;
+      }
+      .cell.drag-over-right {
+        box-shadow: 3px 0 0 0 #4aa3ff;
+      }
+      .cell .title .handle {
+        color: #666;
+        font-size: 14px;
+        line-height: 1;
+      }
+      .cell .title .name {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .cell .title .remove {
+        cursor: pointer;
+        color: #888;
+        padding: 0 4px;
+        border-radius: 3px;
+      }
+      .cell .title .remove:hover {
+        background: #3a2020;
+        color: #ff8a8a;
+      }
+      video {
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #000;
+        display: block;
+      }
+      .empty {
+        padding: 80px 24px;
+        text-align: center;
+        color: #666;
+        border: 2px dashed #333;
+        border-radius: 8px;
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="index.html" class="back-link">← 返回</a>
+      <h1>视频对比</h1>
+      <span class="hint">从 Finder 拖动视频到此页面即可加入对比</span>
+      <div class="controls">
+        <button id="sync-toggle">同时播放</button>
+        <button id="sync-reset">回到 0s</button>
+        <button id="clear" class="danger">清空</button>
+      </div>
+    </header>
+
+    <div id="grid" class="grid"></div>
+
+    <script>
+      const grid = document.getElementById("grid");
+      const items = [];
+
+      function render() {
+        grid.innerHTML = "";
+        if (items.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "把视频文件拖进来开始对比";
+          grid.style.gridTemplateColumns = "1fr";
+          grid.appendChild(empty);
+          return;
+        }
+        grid.style.gridTemplateColumns = `repeat(${items.length}, minmax(0, 1fr))`;
+        items.forEach((item, idx) => {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.idx = String(idx);
+
+          const title = document.createElement("div");
+          title.className = "title";
+          title.draggable = true;
+          title.title = "拖动调整顺序";
+
+          const handle = document.createElement("span");
+          handle.className = "handle";
+          handle.textContent = "⋮⋮";
+
+          const name = document.createElement("span");
+          name.className = "name";
+          name.textContent = item.name;
+          name.title = item.name;
+
+          const remove = document.createElement("span");
+          remove.className = "remove";
+          remove.textContent = "✕";
+          remove.title = "移除";
+          remove.addEventListener("click", () => {
+            URL.revokeObjectURL(item.url);
+            items.splice(idx, 1);
+            render();
+          });
+
+          title.appendChild(handle);
+          title.appendChild(name);
+          title.appendChild(remove);
+
+          title.addEventListener("dragstart", (e) => {
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData(CELL_MIME, String(idx));
+            cell.classList.add("dragging-cell");
+          });
+          title.addEventListener("dragend", () => {
+            cell.classList.remove("dragging-cell");
+            clearDropMarkers();
+          });
+
+          cell.addEventListener("dragover", (e) => {
+            if (!isCellDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "move";
+            const rect = cell.getBoundingClientRect();
+            const before = e.clientX < rect.left + rect.width / 2;
+            clearDropMarkers();
+            cell.classList.add(before ? "drag-over-left" : "drag-over-right");
+          });
+          cell.addEventListener("dragleave", (e) => {
+            if (e.target === cell) {
+              cell.classList.remove("drag-over-left", "drag-over-right");
+            }
+          });
+          cell.addEventListener("drop", (e) => {
+            if (!isCellDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const from = Number(e.dataTransfer.getData(CELL_MIME));
+            const rect = cell.getBoundingClientRect();
+            const before = e.clientX < rect.left + rect.width / 2;
+            let to = idx + (before ? 0 : 1);
+            clearDropMarkers();
+            if (Number.isNaN(from) || from === to || from + 1 === to) return;
+            const [moved] = items.splice(from, 1);
+            if (from < to) to -= 1;
+            items.splice(to, 0, moved);
+            render();
+          });
+
+          const video = document.createElement("video");
+          video.controls = true;
+          video.preload = "metadata";
+          video.src = item.url;
+
+          cell.appendChild(title);
+          cell.appendChild(video);
+          grid.appendChild(cell);
+        });
+      }
+
+      const CELL_MIME = "application/x-cell-index";
+
+      function isCellDrag(e) {
+        return e.dataTransfer && Array.from(e.dataTransfer.types).includes(CELL_MIME);
+      }
+
+      function clearDropMarkers() {
+        document
+          .querySelectorAll(".drag-over-left, .drag-over-right")
+          .forEach((el) => el.classList.remove("drag-over-left", "drag-over-right"));
+      }
+
+      function sortItems() {
+        items.sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
+        );
+      }
+
+      function addFiles(fileList) {
+        const files = Array.from(fileList).filter(
+          (f) => f.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name),
+        );
+        if (files.length === 0) return;
+        files.forEach((f) => {
+          items.push({ name: f.name, url: URL.createObjectURL(f) });
+        });
+        sortItems();
+        render();
+      }
+
+      window.addEventListener("dragover", (e) => {
+        if (isCellDrag(e)) return;
+        e.preventDefault();
+        document.body.classList.add("dragging");
+      });
+      window.addEventListener("dragleave", (e) => {
+        if (e.target === document.documentElement || e.relatedTarget === null) {
+          document.body.classList.remove("dragging");
+        }
+      });
+      window.addEventListener("drop", (e) => {
+        if (isCellDrag(e)) return;
+        e.preventDefault();
+        document.body.classList.remove("dragging");
+        if (e.dataTransfer && e.dataTransfer.files) {
+          addFiles(e.dataTransfer.files);
+        }
+      });
+
+      const toggleBtn = document.getElementById("sync-toggle");
+
+      function refreshToggleLabel() {
+        const anyPlaying = Array.from(document.querySelectorAll("video")).some(
+          (v) => !v.paused && !v.ended,
+        );
+        toggleBtn.textContent = anyPlaying ? "同时暂停" : "同时播放";
+      }
+
+      toggleBtn.addEventListener("click", () => {
+        const videos = document.querySelectorAll("video");
+        const anyPlaying = Array.from(videos).some((v) => !v.paused && !v.ended);
+        videos.forEach((v) => (anyPlaying ? v.pause() : v.play()));
+        refreshToggleLabel();
+      });
+
+      document.addEventListener("play", refreshToggleLabel, true);
+      document.addEventListener("pause", refreshToggleLabel, true);
+      document.addEventListener("ended", refreshToggleLabel, true);
+
+      document.getElementById("sync-reset").addEventListener("click", () => {
+        document.querySelectorAll("video").forEach((v) => {
+          v.pause();
+          v.currentTime = 0;
+        });
+        refreshToggleLabel();
+      });
+      document.getElementById("clear").addEventListener("click", () => {
+        items.forEach((it) => URL.revokeObjectURL(it.url));
+        items.length = 0;
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>
