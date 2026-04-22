@@ -3,9 +3,50 @@
   <head>
     <meta charset="utf-8" />
     <title>视频对比</title>
+    <script>
+      (function () {
+        var saved = null;
+        try { saved = localStorage.getItem('f-tools-theme'); } catch (e) {}
+        var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
     <style>
-      :root {
+      :root[data-theme="dark"] {
         color-scheme: dark;
+        --bg: #111;
+        --bg-drop: #142033;
+        --text: #eee;
+        --text-muted: #888;
+        --text-faint: #666;
+        --surface: #1a1a1a;
+        --surface-2: #222;
+        --surface-hover: #2a2a2a;
+        --surface-hover-2: #3a3a3a;
+        --border: #333;
+        --border-strong: #444;
+        --accent: #4aa3ff;
+        --danger: #ff8a8a;
+        --danger-border: #663030;
+        --danger-hover-bg: #3a2020;
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #f5f6f8;
+        --bg-drop: #e0ecff;
+        --text: #1f2937;
+        --text-muted: #6b7280;
+        --text-faint: #9ca3af;
+        --surface: #ffffff;
+        --surface-2: #f9fafb;
+        --surface-hover: #f3f4f6;
+        --surface-hover-2: #e5e7eb;
+        --border: #e5e7eb;
+        --border-strong: #d1d5db;
+        --accent: #2563eb;
+        --danger: #dc2626;
+        --danger-border: #fca5a5;
+        --danger-hover-bg: #fee2e2;
       }
       * {
         box-sizing: border-box;
@@ -17,17 +58,17 @@
       body {
         margin: 0;
         padding: 16px;
-        background: #111;
-        color: #eee;
+        background: var(--bg);
+        color: var(--text);
         font: 14px/1.4 -apple-system, "PingFang SC", system-ui, sans-serif;
         display: flex;
         flex-direction: column;
         overflow: hidden;
       }
       body.dragging {
-        outline: 3px dashed #4aa3ff;
+        outline: 3px dashed var(--accent);
         outline-offset: -8px;
-        background: #142033;
+        background: var(--bg-drop);
       }
       header {
         display: flex;
@@ -42,7 +83,7 @@
         font-weight: 500;
       }
       .hint {
-        color: #888;
+        color: var(--text-muted);
         font-size: 12px;
       }
       .controls {
@@ -51,31 +92,36 @@
         gap: 8px;
       }
       .back-link {
-        color: #888;
+        color: var(--text-muted);
         text-decoration: none;
         font-size: 13px;
         padding: 4px 8px;
         border-radius: 4px;
       }
       .back-link:hover {
-        color: #eee;
-        background: #2a2a2a;
+        color: var(--text);
+        background: var(--surface-hover);
       }
       button {
-        background: #2a2a2a;
-        color: #eee;
-        border: 1px solid #444;
+        background: var(--surface-hover);
+        color: var(--text);
+        border: 1px solid var(--border-strong);
         padding: 6px 12px;
         border-radius: 4px;
         cursor: pointer;
         font-size: 13px;
       }
       button:hover {
-        background: #3a3a3a;
+        background: var(--surface-hover-2);
       }
       button.danger {
-        border-color: #663030;
-        color: #ff8a8a;
+        border-color: var(--danger-border);
+        color: var(--danger);
+      }
+      #theme-toggle {
+        padding: 6px 10px;
+        font-size: 14px;
+        line-height: 1;
       }
       .grid {
         display: grid;
@@ -84,8 +130,8 @@
         min-height: 0;
       }
       .cell {
-        background: #1a1a1a;
-        border: 1px solid #333;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: 6px;
         overflow: hidden;
         display: flex;
@@ -99,8 +145,8 @@
         gap: 8px;
         padding: 8px 12px;
         font-weight: 500;
-        background: #222;
-        border-bottom: 1px solid #333;
+        background: var(--surface-2);
+        border-bottom: 1px solid var(--border);
         font-size: 13px;
         flex-shrink: 0;
         cursor: grab;
@@ -113,13 +159,13 @@
         opacity: 0.4;
       }
       .cell.drag-over-left {
-        box-shadow: -3px 0 0 0 #4aa3ff;
+        box-shadow: -3px 0 0 0 var(--accent);
       }
       .cell.drag-over-right {
-        box-shadow: 3px 0 0 0 #4aa3ff;
+        box-shadow: 3px 0 0 0 var(--accent);
       }
       .cell .title .handle {
-        color: #666;
+        color: var(--text-faint);
         font-size: 14px;
         line-height: 1;
       }
@@ -131,13 +177,13 @@
       }
       .cell .title .remove {
         cursor: pointer;
-        color: #888;
+        color: var(--text-muted);
         padding: 0 4px;
         border-radius: 3px;
       }
       .cell .title .remove:hover {
-        background: #3a2020;
-        color: #ff8a8a;
+        background: var(--danger-hover-bg);
+        color: var(--danger);
       }
       video {
         flex: 1;
@@ -151,8 +197,8 @@
       .empty {
         padding: 80px 24px;
         text-align: center;
-        color: #666;
-        border: 2px dashed #333;
+        color: var(--text-faint);
+        border: 2px dashed var(--border);
         border-radius: 8px;
         font-size: 15px;
       }
@@ -167,12 +213,37 @@
         <button id="sync-toggle">同时播放</button>
         <button id="sync-reset">回到 0s</button>
         <button id="clear" class="danger">清空</button>
+        <button id="theme-toggle" type="button" title="切换主题">🌙</button>
       </div>
     </header>
 
     <div id="grid" class="grid"></div>
 
     <script>
+      (function setupThemeToggle() {
+        const btn = document.getElementById("theme-toggle");
+        if (!btn) return;
+        function refresh() {
+          const theme = document.documentElement.getAttribute("data-theme");
+          btn.textContent = theme === "dark" ? "☀️" : "🌙";
+          btn.title = theme === "dark" ? "切换到亮色" : "切换到暗色";
+        }
+        btn.addEventListener("click", () => {
+          const cur = document.documentElement.getAttribute("data-theme");
+          const next = cur === "dark" ? "light" : "dark";
+          document.documentElement.setAttribute("data-theme", next);
+          try { localStorage.setItem("f-tools-theme", next); } catch (e) {}
+          refresh();
+        });
+        window.addEventListener("storage", (e) => {
+          if (e.key === "f-tools-theme" && e.newValue) {
+            document.documentElement.setAttribute("data-theme", e.newValue);
+            refresh();
+          }
+        });
+        refresh();
+      })();
+
       const grid = document.getElementById("grid");
       const items = [];
 

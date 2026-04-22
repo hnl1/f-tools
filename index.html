@@ -5,18 +5,46 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>f-tools · 前端小工具集</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧰</text></svg>">
+    <script>
+        (function () {
+            var saved = null;
+            try { saved = localStorage.getItem('f-tools-theme'); } catch (e) {}
+            var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
     <style>
-        :root {
+        :root[data-theme="light"] {
+            color-scheme: light;
             --primary-500: #3b82f6;
             --primary-600: #2563eb;
             --primary-700: #1d4ed8;
-            --gray-50: #f8fafc;
-            --gray-100: #f1f5f9;
-            --gray-200: #e2e8f0;
-            --gray-300: #cbd5e1;
-            --gray-500: #64748b;
-            --gray-700: #334155;
-            --gray-900: #0f172a;
+            --bg-grad-from: #f8fafc;
+            --bg-grad-to: #eff6ff;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --surface-hover: #f1f5f9;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-hover: 0 8px 24px -8px rgba(59, 130, 246, 0.25);
+        }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --primary-500: #60a5fa;
+            --primary-600: #3b82f6;
+            --primary-700: #2563eb;
+            --bg-grad-from: #0b1220;
+            --bg-grad-to: #111827;
+            --surface: #1e293b;
+            --border: #334155;
+            --border-strong: #475569;
+            --surface-hover: #273449;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-hover: 0 8px 24px -8px rgba(96, 165, 250, 0.4);
         }
 
         * {
@@ -28,8 +56,8 @@
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
             line-height: 1.6;
-            color: var(--gray-900);
-            background: linear-gradient(135deg, var(--gray-50) 0%, #eff6ff 100%);
+            color: var(--text);
+            background: linear-gradient(135deg, var(--bg-grad-from) 0%, var(--bg-grad-to) 100%);
             min-height: 100vh;
         }
 
@@ -37,6 +65,32 @@
             max-width: 960px;
             margin: 0 auto;
             padding: 64px 24px;
+            position: relative;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary-500);
+            transform: translateY(-1px);
         }
 
         .header {
@@ -55,7 +109,7 @@
         }
 
         .header p {
-            color: var(--gray-500);
+            color: var(--text-muted);
             font-size: 1rem;
         }
 
@@ -69,20 +123,20 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            background: white;
-            border: 1px solid var(--gray-200);
+            background: var(--surface);
+            border: 1px solid var(--border);
             border-radius: 16px;
             padding: 24px;
             text-decoration: none;
             color: inherit;
             transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            box-shadow: var(--shadow);
         }
 
         .card:hover {
             transform: translateY(-2px);
             border-color: var(--primary-500);
-            box-shadow: 0 8px 24px -8px rgba(59, 130, 246, 0.25);
+            box-shadow: var(--shadow-hover);
         }
 
         .card .icon {
@@ -93,18 +147,18 @@
         .card h2 {
             font-size: 1.125rem;
             font-weight: 600;
-            color: var(--gray-900);
+            color: var(--text);
         }
 
         .card p {
             font-size: 0.875rem;
-            color: var(--gray-500);
+            color: var(--text-muted);
             flex: 1;
         }
 
         .card .arrow {
             align-self: flex-end;
-            color: var(--gray-300);
+            color: var(--border-strong);
             font-size: 1.25rem;
             transition: all 0.2s ease;
         }
@@ -117,18 +171,18 @@
         footer {
             margin-top: 48px;
             text-align: center;
-            color: var(--gray-500);
+            color: var(--text-muted);
             font-size: 0.875rem;
         }
 
         footer a {
-            color: var(--gray-500);
+            color: var(--text-muted);
             text-decoration: none;
-            border-bottom: 1px solid var(--gray-300);
+            border-bottom: 1px solid var(--border-strong);
         }
 
         footer a:hover {
-            color: var(--primary-600);
+            color: var(--primary-500);
             border-color: var(--primary-500);
         }
 
@@ -139,11 +193,16 @@
             .header h1 {
                 font-size: 1.75rem;
             }
+            .theme-toggle {
+                top: 12px;
+                right: 12px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <button class="theme-toggle" id="theme-toggle" type="button" title="切换主题">🌙</button>
         <header class="header">
             <h1>f-tools</h1>
             <p>一些自用的纯前端小工具</p>
@@ -176,5 +235,31 @@
             <a href="https://github.com/hnl1/f-tools" target="_blank" rel="noopener">GitHub</a>
         </footer>
     </div>
+
+    <script>
+        (function () {
+            var btn = document.getElementById('theme-toggle');
+            if (!btn) return;
+            function refresh() {
+                var t = document.documentElement.getAttribute('data-theme');
+                btn.textContent = t === 'dark' ? '☀️' : '🌙';
+                btn.title = t === 'dark' ? '切换到亮色' : '切换到暗色';
+            }
+            btn.addEventListener('click', function () {
+                var cur = document.documentElement.getAttribute('data-theme');
+                var next = cur === 'dark' ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', next);
+                try { localStorage.setItem('f-tools-theme', next); } catch (e) {}
+                refresh();
+            });
+            window.addEventListener('storage', function (e) {
+                if (e.key === 'f-tools-theme' && e.newValue) {
+                    document.documentElement.setAttribute('data-theme', e.newValue);
+                    refresh();
+                }
+            });
+            refresh();
+        })();
+    </script>
 </body>
 </html>
