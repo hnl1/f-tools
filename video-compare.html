@@ -5,10 +5,14 @@
     <title>视频对比</title>
     <script>
       (function () {
-        var saved = null;
-        try { saved = localStorage.getItem('f-tools-theme'); } catch (e) {}
-        var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-        document.documentElement.setAttribute('data-theme', theme);
+        var pref = null;
+        try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
+        if (pref !== 'light' && pref !== 'dark') pref = 'auto';
+        var actual = pref === 'auto'
+          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+          : pref;
+        document.documentElement.setAttribute('data-theme', actual);
+        document.documentElement.setAttribute('data-theme-pref', pref);
       })();
     </script>
     <style>
@@ -223,25 +227,43 @@
       (function setupThemeToggle() {
         const btn = document.getElementById("theme-toggle");
         if (!btn) return;
-        function refresh() {
-          const theme = document.documentElement.getAttribute("data-theme");
-          btn.textContent = theme === "dark" ? "☀️" : "🌙";
-          btn.title = theme === "dark" ? "切换到亮色" : "切换到暗色";
+        const mql = window.matchMedia("(prefers-color-scheme: dark)");
+        const ICONS = {
+          auto: { icon: "🖥️", title: "跟随系统（点击切到亮色）" },
+          light: { icon: "☀️", title: "亮色（点击切到暗色）" },
+          dark: { icon: "🌙", title: "暗色（点击切到跟随系统）" },
+        };
+        function getPref() {
+          let p = null;
+          try { p = localStorage.getItem("f-tools-theme"); } catch (e) {}
+          return p === "light" || p === "dark" ? p : "auto";
+        }
+        function setPref(p) {
+          try {
+            if (p === "auto") localStorage.removeItem("f-tools-theme");
+            else localStorage.setItem("f-tools-theme", p);
+          } catch (e) {}
+          apply(p);
+        }
+        function apply(pref) {
+          const actual = pref === "auto" ? (mql.matches ? "dark" : "light") : pref;
+          document.documentElement.setAttribute("data-theme", actual);
+          document.documentElement.setAttribute("data-theme-pref", pref);
+          btn.textContent = ICONS[pref].icon;
+          btn.title = ICONS[pref].title;
         }
         btn.addEventListener("click", () => {
-          const cur = document.documentElement.getAttribute("data-theme");
-          const next = cur === "dark" ? "light" : "dark";
-          document.documentElement.setAttribute("data-theme", next);
-          try { localStorage.setItem("f-tools-theme", next); } catch (e) {}
-          refresh();
+          const cur = getPref();
+          setPref(cur === "auto" ? "light" : cur === "light" ? "dark" : "auto");
+        });
+        mql.addEventListener("change", () => {
+          if (getPref() === "auto") apply("auto");
         });
         window.addEventListener("storage", (e) => {
-          if (e.key === "f-tools-theme" && e.newValue) {
-            document.documentElement.setAttribute("data-theme", e.newValue);
-            refresh();
-          }
+          if (e.key !== "f-tools-theme") return;
+          apply(getPref());
         });
-        refresh();
+        apply(getPref());
       })();
 
       const grid = document.getElementById("grid");

@@ -7,10 +7,14 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧰</text></svg>">
     <script>
         (function () {
-            var saved = null;
-            try { saved = localStorage.getItem('f-tools-theme'); } catch (e) {}
-            var theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.setAttribute('data-theme', theme);
+            var pref = null;
+            try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
+            if (pref !== 'light' && pref !== 'dark') pref = 'auto';
+            var actual = pref === 'auto'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : pref;
+            document.documentElement.setAttribute('data-theme', actual);
+            document.documentElement.setAttribute('data-theme-pref', pref);
         })();
     </script>
     <style>
@@ -240,25 +244,43 @@
         (function () {
             var btn = document.getElementById('theme-toggle');
             if (!btn) return;
-            function refresh() {
-                var t = document.documentElement.getAttribute('data-theme');
-                btn.textContent = t === 'dark' ? '☀️' : '🌙';
-                btn.title = t === 'dark' ? '切换到亮色' : '切换到暗色';
+            var mql = window.matchMedia('(prefers-color-scheme: dark)');
+            var ICONS = {
+                auto: { icon: '🖥️', title: '跟随系统（点击切到亮色）' },
+                light: { icon: '☀️', title: '亮色（点击切到暗色）' },
+                dark: { icon: '🌙', title: '暗色（点击切到跟随系统）' }
+            };
+            function getPref() {
+                var p = null;
+                try { p = localStorage.getItem('f-tools-theme'); } catch (e) {}
+                return p === 'light' || p === 'dark' ? p : 'auto';
+            }
+            function apply(pref) {
+                var actual = pref === 'auto' ? (mql.matches ? 'dark' : 'light') : pref;
+                document.documentElement.setAttribute('data-theme', actual);
+                document.documentElement.setAttribute('data-theme-pref', pref);
+                btn.textContent = ICONS[pref].icon;
+                btn.title = ICONS[pref].title;
+            }
+            function setPref(p) {
+                try {
+                    if (p === 'auto') localStorage.removeItem('f-tools-theme');
+                    else localStorage.setItem('f-tools-theme', p);
+                } catch (e) {}
+                apply(p);
             }
             btn.addEventListener('click', function () {
-                var cur = document.documentElement.getAttribute('data-theme');
-                var next = cur === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-theme', next);
-                try { localStorage.setItem('f-tools-theme', next); } catch (e) {}
-                refresh();
+                var cur = getPref();
+                setPref(cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto');
+            });
+            mql.addEventListener('change', function () {
+                if (getPref() === 'auto') apply('auto');
             });
             window.addEventListener('storage', function (e) {
-                if (e.key === 'f-tools-theme' && e.newValue) {
-                    document.documentElement.setAttribute('data-theme', e.newValue);
-                    refresh();
-                }
+                if (e.key !== 'f-tools-theme') return;
+                apply(getPref());
             });
-            refresh();
+            apply(getPref());
         })();
     </script>
 </body>
