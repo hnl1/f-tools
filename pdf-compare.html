@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>PDF 对比</title>
+<script>
+  (function () {
+    var pref = null;
+    try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
+    if (pref !== 'light' && pref !== 'dark') pref = 'auto';
+    var actual = pref === 'auto'
+      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : pref;
+    document.documentElement.setAttribute('data-theme', actual);
+    document.documentElement.setAttribute('data-theme-pref', pref);
+  })();
+</script>
+<style>
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1e1e1e;
+    --text: #ddd;
+    --text-muted: #aaa;
+    --text-faint: #888;
+    --text-fainter: #666;
+    --header-bg: #252525;
+    --border: #333;
+    --button-bg: #3a3a3a;
+    --button-border: #555;
+    --button-hover: #4a4a4a;
+    --col-bg: #161616;
+    --page-bg: #ffffff;
+    --accent: #4a9eff;
+    --accent-tint: rgba(74, 158, 255, 0.05);
+    --label-bg: rgba(0, 0, 0, 0.7);
+    --label-text: #fff;
+    --remove-bg: rgba(0, 0, 0, 0.65);
+    --divider: #2a2a2a;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #fafafa;
+    --text: #1f2937;
+    --text-muted: #4b5563;
+    --text-faint: #6b7280;
+    --text-fainter: #9ca3af;
+    --header-bg: #ffffff;
+    --border: #e5e7eb;
+    --button-bg: #ffffff;
+    --button-border: #d1d5db;
+    --button-hover: #f3f4f6;
+    --col-bg: #f3f4f6;
+    --page-bg: #ffffff;
+    --accent: #2563eb;
+    --accent-tint: rgba(37, 99, 235, 0.06);
+    --label-bg: rgba(255, 255, 255, 0.85);
+    --label-text: #1f2937;
+    --remove-bg: rgba(0, 0, 0, 0.55);
+    --divider: #e5e7eb;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+    flex: 0 0 auto;
+  }
+  header .back-link {
+    color: var(--text-faint);
+    text-decoration: none;
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex: 0 0 auto;
+  }
+  header .back-link:hover {
+    color: var(--text);
+    background: var(--button-hover);
+  }
+  header .controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  header label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    cursor: pointer;
+  }
+  header select {
+    background: var(--button-bg);
+    color: var(--text);
+    border: 1px solid var(--button-border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+  }
+  header button {
+    background: var(--button-bg);
+    color: var(--text);
+    border: 1px solid var(--button-border);
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+  header button:hover { background: var(--button-hover); }
+  #theme-toggle {
+    padding: 3px 8px;
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  #drop-hint {
+    flex: 1 1 auto;
+    margin: 40px;
+    padding: 60px;
+    border: 2px dashed var(--button-border);
+    border-radius: 12px;
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  #drop-hint.dragging {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-tint);
+  }
+  #drop-hint small {
+    display: block;
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-fainter);
+  }
+
+  #grid {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    gap: 0;
+    background: var(--bg);
+  }
+  .col {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border-right: 1px solid var(--divider);
+    background: var(--col-bg);
+  }
+  .col:last-child { border-right: none; }
+  .col .col-header {
+    flex: 0 0 auto;
+    background: var(--label-bg);
+    color: var(--label-text);
+    font-size: 12px;
+    padding: 4px 28px 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: grab;
+    user-select: none;
+    border-bottom: 1px solid var(--divider);
+    position: relative;
+  }
+  .col .col-header:active { cursor: grabbing; }
+  .col.dragging-col { opacity: 0.4; }
+  .col.drop-before { box-shadow: inset 3px 0 0 0 var(--accent); }
+  .col.drop-after { box-shadow: inset -3px 0 0 0 var(--accent); }
+  .col .col-header .name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .col .col-header .meta {
+    flex: 0 0 auto;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .col .col-header .remove {
+    background: var(--remove-bg);
+    color: #fff;
+    border: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    flex: 0 0 auto;
+  }
+  .col .scroller {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: var(--col-bg);
+    padding: 8px;
+    scroll-behavior: auto;
+  }
+  .col .scroller .pages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .col .scroller .page {
+    background: var(--page-bg);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    width: 100%;
+    position: relative;
+  }
+  .col .scroller .page canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .col .scroller .page .page-num {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: var(--label-bg);
+    color: var(--label-text);
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+    opacity: 0.85;
+  }
+  .col .loading {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <a href="index.html" class="back-link">← 返回</a>
+  <h1>PDF 对比</h1>
+  <div class="controls">
+    <label title="同步滚动方式">
+      同步
+      <select id="sync-mode">
+        <option value="ratio">按比例</option>
+        <option value="page">按页码</option>
+        <option value="off">关闭</option>
+      </select>
+    </label>
+    <label title="渲染清晰度倍数">
+      清晰度
+      <select id="dpr">
+        <option value="1">1x</option>
+        <option value="1.5">1.5x</option>
+        <option value="2" selected>2x</option>
+        <option value="3">3x</option>
+      </select>
+    </label>
+    <button id="clear-btn">清空</button>
+    <button id="add-btn">添加 PDF</button>
+    <button id="theme-toggle" type="button" title="切换主题">🌙</button>
+    <input type="file" id="file-input" accept="application/pdf,.pdf" multiple style="display:none">
+  </div>
+</header>
+
+<div id="drop-hint">
+  拖拽 PDF 到此处
+  <small>支持多个 PDF，按文件名排序后横向平铺；任一列上下滚动时，其它列会同步滚动</small>
+</div>
+
+<div id="grid" style="display:none"></div>
+
+<script type="module">
+import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs';
+
+(() => {
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const ICONS = {
+      auto: { icon: '🖥️', title: '跟随系统（点击切到亮色）' },
+      light: { icon: '☀️', title: '亮色（点击切到暗色）' },
+      dark: { icon: '🌙', title: '暗色（点击切到跟随系统）' },
+    };
+    const getPref = () => {
+      let p = null;
+      try { p = localStorage.getItem('f-tools-theme'); } catch (e) {}
+      return p === 'light' || p === 'dark' ? p : 'auto';
+    };
+    const apply = (pref) => {
+      const actual = pref === 'auto' ? (mql.matches ? 'dark' : 'light') : pref;
+      document.documentElement.setAttribute('data-theme', actual);
+      document.documentElement.setAttribute('data-theme-pref', pref);
+      themeBtn.textContent = ICONS[pref].icon;
+      themeBtn.title = ICONS[pref].title;
+    };
+    const setPref = (p) => {
+      try {
+        if (p === 'auto') localStorage.removeItem('f-tools-theme');
+        else localStorage.setItem('f-tools-theme', p);
+      } catch (e) {}
+      apply(p);
+    };
+    themeBtn.addEventListener('click', () => {
+      const cur = getPref();
+      setPref(cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto');
+    });
+    mql.addEventListener('change', () => {
+      if (getPref() === 'auto') apply('auto');
+    });
+    window.addEventListener('storage', (e) => {
+      if (e.key !== 'f-tools-theme') return;
+      apply(getPref());
+    });
+    apply(getPref());
+  }
+
+  const grid = document.getElementById('grid');
+  const dropHint = document.getElementById('drop-hint');
+  const clearBtn = document.getElementById('clear-btn');
+  const addBtn = document.getElementById('add-btn');
+  const fileInput = document.getElementById('file-input');
+  const syncModeSel = document.getElementById('sync-mode');
+  const dprSel = document.getElementById('dpr');
+
+  /** @type {{name:string, file:File, pdf:any, col:HTMLElement, scroller:HTMLElement, pagesEl:HTMLElement, pageEls:HTMLElement[], pageOffsets:number[], numPages:number}[]} */
+  let items = [];
+
+  let renderScale = parseFloat(dprSel.value);
+  let syncMode = syncModeSel.value;
+  let isSyncing = false;
+
+  syncModeSel.addEventListener('change', () => { syncMode = syncModeSel.value; });
+  dprSel.addEventListener('change', async () => {
+    renderScale = parseFloat(dprSel.value);
+    for (const it of items) await rerenderColumn(it);
+  });
+
+  clearBtn.addEventListener('click', clearAll);
+  addBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files.length) {
+      handleFiles(Array.from(e.target.files));
+      fileInput.value = '';
+    }
+  });
+
+  function isFileDrag(e) {
+    const types = e.dataTransfer && e.dataTransfer.types;
+    if (!types) return false;
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === 'Files') return true;
+    }
+    return false;
+  }
+  ['dragenter', 'dragover'].forEach(ev => {
+    window.addEventListener(ev, (e) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      dropHint.classList.add('dragging');
+    });
+  });
+  ['dragleave', 'drop'].forEach(ev => {
+    window.addEventListener(ev, (e) => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault();
+      if (ev === 'dragleave' && e.relatedTarget) return;
+      dropHint.classList.remove('dragging');
+    });
+  });
+  window.addEventListener('drop', (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    const files = Array.from(e.dataTransfer.files).filter(
+      f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
+    );
+    if (files.length) handleFiles(files);
+  });
+
+  function clearAll() {
+    items.forEach(it => { try { it.pdf && it.pdf.destroy && it.pdf.destroy(); } catch(_){} });
+    items = [];
+    grid.innerHTML = '';
+    grid.style.display = 'none';
+    dropHint.style.display = '';
+  }
+
+  async function handleFiles(files) {
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    dropHint.style.display = 'none';
+    grid.style.display = '';
+    for (const f of files) {
+      await addPdf(f);
+    }
+  }
+
+  async function addPdf(file) {
+    const col = document.createElement('div');
+    col.className = 'col';
+
+    const colHeader = document.createElement('div');
+    colHeader.className = 'col-header';
+    colHeader.draggable = true;
+    colHeader.title = '拖动调整顺序';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'name';
+    nameEl.textContent = file.name;
+    nameEl.title = file.name;
+
+    const metaEl = document.createElement('span');
+    metaEl.className = 'meta';
+    metaEl.textContent = '加载中…';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove';
+    removeBtn.textContent = '×';
+    removeBtn.title = '移除';
+
+    colHeader.appendChild(nameEl);
+    colHeader.appendChild(metaEl);
+    colHeader.appendChild(removeBtn);
+
+    const loading = document.createElement('div');
+    loading.className = 'loading';
+    loading.textContent = '正在解析 PDF…';
+
+    col.appendChild(colHeader);
+    col.appendChild(loading);
+    grid.appendChild(col);
+
+    const item = {
+      name: file.name, file, pdf: null,
+      col, colHeader, scroller: null, pagesEl: null,
+      pageEls: [], pageOffsets: [], numPages: 0,
+    };
+    items.push(item);
+
+    removeBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      removeItem(item);
+    });
+    attachReorderHandlers(col, colHeader, item);
+
+    try {
+      const buf = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buf) });
+      const pdf = await loadingTask.promise;
+      item.pdf = pdf;
+      item.numPages = pdf.numPages;
+      metaEl.textContent = `${pdf.numPages} 页`;
+
+      const scroller = document.createElement('div');
+      scroller.className = 'scroller';
+      const pagesEl = document.createElement('div');
+      pagesEl.className = 'pages';
+      scroller.appendChild(pagesEl);
+
+      col.removeChild(loading);
+      col.appendChild(scroller);
+
+      item.scroller = scroller;
+      item.pagesEl = pagesEl;
+
+      scroller.addEventListener('scroll', () => onScroll(item), { passive: true });
+
+      await renderColumn(item);
+    } catch (err) {
+      console.error(err);
+      loading.textContent = '加载失败：' + (err && err.message ? err.message : err);
+      metaEl.textContent = '失败';
+    }
+  }
+
+  async function renderColumn(item) {
+    if (!item.pdf || !item.pagesEl) return;
+    item.pagesEl.innerHTML = '';
+    item.pageEls = [];
+    const colWidth = Math.max(80, item.scroller.clientWidth - 16); // minus padding
+    for (let i = 1; i <= item.numPages; i++) {
+      const page = await item.pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 1 });
+      const cssScale = colWidth / viewport.width;
+      const renderViewport = page.getViewport({ scale: cssScale * renderScale });
+
+      const pageWrap = document.createElement('div');
+      pageWrap.className = 'page';
+      pageWrap.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.floor(renderViewport.width);
+      canvas.height = Math.floor(renderViewport.height);
+      const ctx = canvas.getContext('2d');
+
+      const num = document.createElement('div');
+      num.className = 'page-num';
+      num.textContent = `${i} / ${item.numPages}`;
+
+      pageWrap.appendChild(canvas);
+      pageWrap.appendChild(num);
+      item.pagesEl.appendChild(pageWrap);
+      item.pageEls.push(pageWrap);
+
+      try {
+        await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+      } catch (err) {
+        console.error('render page error', err);
+      }
+    }
+    computeOffsets(item);
+  }
+
+  async function rerenderColumn(item) {
+    if (!item.pdf) return;
+    await renderColumn(item);
+  }
+
+  function computeOffsets(item) {
+    item.pageOffsets = item.pageEls.map(el => el.offsetTop);
+  }
+
+  function removeItem(item) {
+    items = items.filter(i => i !== item);
+    item.col.remove();
+    try { item.pdf && item.pdf.destroy && item.pdf.destroy(); } catch (_) {}
+    if (items.length === 0) {
+      grid.style.display = 'none';
+      dropHint.style.display = '';
+    }
+  }
+
+  // ---------- 同步滚动 ----------
+  function onScroll(srcItem) {
+    if (isSyncing || syncMode === 'off') return;
+    if (items.length < 2) return;
+
+    isSyncing = true;
+    try {
+      if (syncMode === 'ratio') {
+        const max = srcItem.scroller.scrollHeight - srcItem.scroller.clientHeight;
+        const ratio = max > 0 ? srcItem.scroller.scrollTop / max : 0;
+        items.forEach(it => {
+          if (it === srcItem) return;
+          const m = it.scroller.scrollHeight - it.scroller.clientHeight;
+          it.scroller.scrollTop = Math.round(ratio * Math.max(0, m));
+        });
+      } else if (syncMode === 'page') {
+        // 找到当前列在哪一页，以及该页内的滚动比例，应用到其它列
+        const { pageIdx, frac } = pageProgress(srcItem);
+        items.forEach(it => {
+          if (it === srcItem) return;
+          if (!it.pageEls.length) return;
+          const idx = Math.min(pageIdx, it.pageEls.length - 1);
+          const el = it.pageEls[idx];
+          if (!el) return;
+          const top = el.offsetTop;
+          it.scroller.scrollTop = Math.round(top + frac * el.offsetHeight);
+        });
+      }
+    } finally {
+      requestAnimationFrame(() => { isSyncing = false; });
+    }
+  }
+
+  function pageProgress(item) {
+    const top = item.scroller.scrollTop;
+    const offsets = item.pageOffsets;
+    if (!offsets.length) return { pageIdx: 0, frac: 0 };
+    let idx = 0;
+    for (let i = 0; i < offsets.length; i++) {
+      if (offsets[i] <= top) idx = i; else break;
+    }
+    const el = item.pageEls[idx];
+    const h = el ? el.offsetHeight : 1;
+    const frac = Math.max(0, Math.min(1, (top - offsets[idx]) / Math.max(1, h)));
+    return { pageIdx: idx, frac };
+  }
+
+  // ---------- 列重排 ----------
+  let dragSrcItem = null;
+  function attachReorderHandlers(col, headerEl, item) {
+    headerEl.addEventListener('dragstart', (e) => {
+      dragSrcItem = item;
+      col.classList.add('dragging-col');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('application/x-pdf-col', item.name); } catch (_) {}
+      }
+    });
+    headerEl.addEventListener('dragend', () => {
+      dragSrcItem = null;
+      col.classList.remove('dragging-col');
+      clearDropMarkers();
+    });
+    col.addEventListener('dragover', (e) => {
+      if (!dragSrcItem || dragSrcItem === item) return;
+      const types = e.dataTransfer && e.dataTransfer.types;
+      if (!types || !Array.from(types).includes('application/x-pdf-col')) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = col.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      clearDropMarkers();
+      col.classList.add(before ? 'drop-before' : 'drop-after');
+    });
+    col.addEventListener('dragleave', () => {
+      col.classList.remove('drop-before', 'drop-after');
+    });
+    col.addEventListener('drop', (e) => {
+      if (!dragSrcItem || dragSrcItem === item) return;
+      const types = e.dataTransfer && e.dataTransfer.types;
+      if (!types || !Array.from(types).includes('application/x-pdf-col')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = col.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      reorderItem(dragSrcItem, item, before);
+      clearDropMarkers();
+    });
+  }
+  function clearDropMarkers() {
+    document.querySelectorAll('.col.drop-before, .col.drop-after')
+      .forEach(el => el.classList.remove('drop-before', 'drop-after'));
+  }
+  function reorderItem(src, target, before) {
+    const fromIdx = items.indexOf(src);
+    if (fromIdx < 0) return;
+    items.splice(fromIdx, 1);
+    let toIdx = items.indexOf(target);
+    if (toIdx < 0) return;
+    if (!before) toIdx += 1;
+    items.splice(toIdx, 0, src);
+    items.forEach(it => grid.appendChild(it.col));
+  }
+
+  // ---------- 窗口尺寸变化时按需重新渲染 ----------
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(async () => {
+      for (const it of items) await rerenderColumn(it);
+    }, 250);
+  });
+})();
+</script>
+</body>
+</html>
