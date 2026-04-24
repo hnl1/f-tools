@@ -305,7 +305,7 @@
   <a href="index.html" class="back-link">← 返回</a>
   <h1>图片对比</h1>
   <div class="controls">
-    <label title="取样区域占图片宽度的比例（与各图分辨率无关，对应内容上的同一块区域）">
+    <label title="取样区域占图片短边的比例（与各图分辨率无关，对应内容上的同一块区域）">
       取样区域
       <input type="range" id="region-frac" min="5" max="50" step="5" value="25">
       <span id="region-frac-value">25%</span>
@@ -647,7 +647,8 @@
     items.forEach(item => {
       if (!item.canvas) return;
       // Per-image source pixels: same content fraction across all images
-      const srcSidePx = Math.max(2, Math.round(regionFrac * item.img.naturalWidth));
+      const srcShortSide = Math.min(item.img.naturalWidth, item.img.naturalHeight);
+      const srcSidePx = Math.max(2, Math.round(regionFrac * srcShortSide));
       item.canvas.width = srcSidePx;
       item.canvas.height = srcSidePx;
       item.canvas.style.width = canvasCssSide + 'px';
@@ -685,8 +686,8 @@
   function drawLens(item) {
     const rect = item.baseImg.getBoundingClientRect();
     const tileRect = item.tile.getBoundingClientRect();
-    // Lens box covers the same content fraction on every tile (CSS px = frac × displayed width).
-    const cssBox = Math.max(4, regionFrac * rect.width);
+    // Lens box covers the same content fraction on every tile (CSS px = frac × displayed short side).
+    const cssBox = Math.max(4, regionFrac * Math.min(rect.width, rect.height));
     const cx = curU * rect.width + (rect.left - tileRect.left);
     const cy = curV * rect.height + (rect.top - tileRect.top);
     item.lens.style.display = 'block';
