@@ -1,0 +1,199 @@
+:root {
+  --ft-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --ft-radius-sm: 8px;
+  --ft-radius-md: 12px;
+  --ft-radius-lg: 16px;
+  --ft-transition: 0.2s ease;
+}
+
+:root[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-drop: #eff6ff;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --text-fainter: #cbd5e1;
+  --header-bg: rgba(255, 255, 255, 0.92);
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --surface-soft: #f1f5f9;
+  --surface-hover: #f1f5f9;
+  --surface-hover-2: #e2e8f0;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --button-bg: #ffffff;
+  --button-border: #cbd5e1;
+  --button-hover: #f1f5f9;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --accent-tint: rgba(37, 99, 235, 0.08);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-hover: 0 10px 28px -12px rgba(37, 99, 235, 0.35);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f172a;
+  --bg-drop: #142033;
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-faint: #64748b;
+  --text-fainter: #475569;
+  --header-bg: rgba(15, 23, 42, 0.92);
+  --surface: #1e293b;
+  --surface-2: #172033;
+  --surface-soft: #111827;
+  --surface-hover: #273449;
+  --surface-hover-2: #334155;
+  --border: #334155;
+  --border-strong: #475569;
+  --button-bg: #1e293b;
+  --button-border: #475569;
+  --button-hover: #273449;
+  --accent: #60a5fa;
+  --accent-strong: #3b82f6;
+  --accent-tint: rgba(96, 165, 250, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-hover: 0 10px 28px -12px rgba(96, 165, 250, 0.45);
+}
+
+body {
+  font-family: var(--ft-font);
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+body.home-page,
+body.card-page {
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg-drop) 100%);
+  color: var(--text);
+}
+
+body.tool-page {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body.tool-page > header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 10px 16px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+
+body.tool-page > header h1 {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+body.tool-page .back-link,
+body.card-page .back-link {
+  color: var(--text-muted);
+  border-radius: var(--ft-radius-sm);
+}
+
+body.tool-page .back-link:hover,
+body.card-page .back-link:hover {
+  color: var(--accent);
+  background: var(--accent-tint);
+}
+
+body.tool-page button,
+body.tool-page .button {
+  background: var(--button-bg);
+  color: var(--text);
+  border: 1px solid var(--button-border);
+  border-radius: var(--ft-radius-sm);
+  box-shadow: var(--shadow);
+  transition: background var(--ft-transition), border-color var(--ft-transition),
+    color var(--ft-transition), transform var(--ft-transition);
+}
+
+body.tool-page button:hover,
+body.tool-page .button:hover {
+  background: var(--button-hover);
+  border-color: var(--accent);
+}
+
+body.tool-page .button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+body.tool-page .button.primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+body.tool-page button.danger {
+  color: var(--danger, #dc2626);
+}
+
+body.tool-page button.danger:hover {
+  border-color: var(--danger-border, var(--accent));
+  background: var(--danger-hover-bg, var(--button-hover));
+}
+
+body.tool-page input[type="file"],
+body.tool-page input[type="number"],
+body.tool-page select {
+  background: var(--button-bg);
+  color: var(--text);
+  border: 1px solid var(--button-border);
+  border-radius: var(--ft-radius-sm);
+}
+
+body.tool-page #drop-hint,
+body.tool-page .empty {
+  background: var(--surface);
+  border-color: var(--button-border);
+  border-radius: var(--ft-radius-lg);
+  color: var(--text-faint);
+  box-shadow: var(--shadow);
+}
+
+body.tool-page #drop-hint.dragging {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-tint);
+}
+
+body.tool-page .cell,
+body.tool-page .panel,
+body.tool-page .preview {
+  background: var(--surface);
+  border-color: var(--border);
+  border-radius: var(--ft-radius-md);
+  box-shadow: var(--shadow);
+}
+
+body.card-page .main-card {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-hover);
+}
+
+body.card-page .input {
+  border-color: var(--border);
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+body.card-page .label,
+body.card-page .header h1 {
+  color: var(--text);
+}
+
+body.card-page .header p {
+  color: var(--text-muted);
+}

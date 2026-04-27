@@ -61,7 +61,7 @@
       }
       body {
         margin: 0;
-        padding: 16px;
+        padding: 0;
         background: var(--bg);
         color: var(--text);
         font: 14px/1.4 -apple-system, "PingFang SC", system-ui, sans-serif;
@@ -132,6 +132,7 @@
         gap: 12px;
         flex: 1;
         min-height: 0;
+        margin: 12px 16px 16px;
       }
       .cell {
         background: var(--surface);
@@ -207,10 +208,11 @@
         font-size: 15px;
       }
     </style>
+    <link rel="stylesheet" href="../assets/common.css">
   </head>
-  <body>
+  <body class="tool-page">
     <header>
-      <a href="index.html" class="back-link">← 返回</a>
+      <a href="../index.html" class="back-link">← 返回</a>
       <h1>视频对比</h1>
       <span class="hint">从 Finder 拖动视频到此页面即可加入对比</span>
       <div class="controls">

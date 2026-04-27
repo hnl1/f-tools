@@ -278,10 +278,11 @@
     font-size: 13px;
   }
 </style>
+<link rel="stylesheet" href="../assets/common.css">
 </head>
-<body>
+<body class="tool-page">
 <header>
-  <a href="index.html" class="back-link">← 返回</a>
+  <a href="../index.html" class="back-link">← 返回</a>
   <h1>PDF 对比</h1>
   <div class="controls">
     <label title="同步滚动方式">
@@ -315,9 +316,9 @@
 
 <div id="grid" style="display:none"></div>
 
-<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="../vendor/pdfjs/pdf.min.js"></script>
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
 (() => {
   const themeBtn = document.getElementById('theme-toggle');
