@@ -315,9 +315,9 @@
 
 <div id="grid" style="display:none"></div>
 
-<script type="module">
-import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.min.mjs';
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.7.76/build/pdf.worker.min.mjs';
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
 
 (() => {
   const themeBtn = document.getElementById('theme-toggle');
@@ -368,6 +368,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
   const fileInput = document.getElementById('file-input');
   const syncModeSel = document.getElementById('sync-mode');
   const dprSel = document.getElementById('dpr');
+  const backLink = document.querySelector('.back-link');
 
   /** @type {{name:string, file:File, pdf:any, col:HTMLElement, scroller:HTMLElement, pagesEl:HTMLElement, pageEls:HTMLElement[], pageOffsets:number[], numPages:number}[]} */
   let items = [];
@@ -375,6 +376,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
   let renderScale = parseFloat(dprSel.value);
   let syncMode = syncModeSel.value;
   let isSyncing = false;
+
+  setupBackLink();
 
   syncModeSel.addEventListener('change', () => { syncMode = syncModeSel.value; });
   dprSel.addEventListener('change', async () => {
@@ -422,6 +425,86 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
     );
     if (files.length) handleFiles(files);
   });
+
+  loadTransferredPdfs();
+
+  function setupBackLink() {
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('from');
+    if (!backLink || from !== 'pdf-to-image.html') return;
+    backLink.href = 'pdf-to-image.html';
+  }
+
+  function openTransferDb() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('f-tools-pdf-transfer', 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains('transfers')) {
+          db.createObjectStore('transfers', { keyPath: 'id' });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async function getTransfer(id) {
+    const db = await openTransferDb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction('transfers', 'readonly');
+        const request = tx.objectStore('transfers').get(id);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  async function deleteTransfer(id) {
+    const db = await openTransferDb();
+    try {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('transfers', 'readwrite');
+        tx.objectStore('transfers').delete(id);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    } finally {
+      db.close();
+    }
+  }
+
+  async function loadTransferredPdfs() {
+    const params = new URLSearchParams(window.location.search);
+    const transferId = params.get('transfer');
+    if (!transferId) return;
+
+    dropHint.style.display = '';
+    dropHint.innerHTML = '正在加载转换结果...<small>将自动载入原始 PDF 和图片版 PDF</small>';
+
+    try {
+      const record = await getTransfer(transferId);
+      if (!record || !Array.isArray(record.files) || record.files.length === 0) {
+        throw new Error('未找到转换结果，请回到 PDF 转图片页重新生成。');
+      }
+
+      const files = record.files.map((entry, index) => new File(
+        [entry.blob],
+        entry.name || `转换结果-${index + 1}.pdf`,
+        { type: entry.type || 'application/pdf' }
+      ));
+      await handleFiles(files);
+      await deleteTransfer(transferId);
+    } catch (err) {
+      console.error(err);
+      dropHint.style.display = '';
+      dropHint.innerHTML = `加载转换结果失败<small>${err && err.message ? err.message : err}</small>`;
+    }
+  }
 
   function clearAll() {
     items.forEach(it => { try { it.pdf && it.pdf.destroy && it.pdf.destroy(); } catch(_){} });
