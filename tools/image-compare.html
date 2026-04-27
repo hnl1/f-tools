@@ -141,28 +141,14 @@
     flex: 1 1 auto;
     margin: 40px;
     padding: 60px;
-    border: 2px dashed var(--button-border);
-    border-radius: 12px;
     text-align: center;
-    color: var(--text-faint);
     font-size: 18px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 12px;
   }
-  #drop-hint.dragging {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-tint);
-  }
-  #drop-hint small {
-    display: block;
-    margin-top: 12px;
-    font-size: 13px;
-    color: var(--text-fainter);
-  }
-
   #grid {
     flex: 1 1 0;
     min-height: 0;
@@ -303,7 +289,7 @@
 </head>
 <body class="tool-page">
 <header>
-  <a href="../index.html" class="back-link">← 返回</a>
+  <a href="../index.html" class="back-link">主页</a>
   <h1>图片对比</h1>
   <div class="controls">
     <label title="取样区域占图片短边的比例（与各图分辨率无关，对应内容上的同一块区域）">
@@ -312,22 +298,32 @@
       <span id="region-frac-value">25%</span>
     </label>
     <button id="clear-btn">清空</button>
-    <button id="add-btn">添加图片</button>
+    <button id="add-btn" type="button">添加图片</button>
     <button id="theme-toggle" type="button" title="切换主题">🌙</button>
-    <input type="file" id="file-input" accept="image/*" multiple style="display:none">
+    <input type="file" id="file-input" class="visually-hidden-file" accept="image/*" multiple aria-label="选择图片文件">
   </div>
 </header>
 
-<div id="drop-hint">
-  拖拽图片到此处
-  <small>支持多张图片，按文件名排序后平铺；鼠标在任一张图上移动时，所有图片对应位置会同步放大显示在底部</small>
+<div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="image-drop-title">
+  <div class="file-drop-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4v12"></path>
+      <path d="m7 9 5-5 5 5"></path>
+      <path d="M5 18v2h14v-2"></path>
+    </svg>
+  </div>
+  <div>
+    <div id="image-drop-title" class="file-drop-title">拖入、粘贴或点击添加图片</div>
+  </div>
+  <div id="image-drop-status" class="file-drop-status" hidden></div>
 </div>
 
-<div id="grid"></div>
+<div id="grid" style="display:none"></div>
 
 <div id="zoom-resizer" title="拖动调整放大面板大小"></div>
 <div id="zoom-strip"></div>
 
+<script src="../assets/file-input.js"></script>
 <script>
 (() => {
   const themeBtn = document.getElementById('theme-toggle');
@@ -380,6 +376,8 @@
   const clearBtn = document.getElementById('clear-btn');
   const addBtn = document.getElementById('add-btn');
   const fileInput = document.getElementById('file-input');
+  const dropStatus = document.getElementById('image-drop-status');
+  let fileDropZone = null;
 
   /** @type {{name:string, img:HTMLImageElement, tile:HTMLElement, lens:HTMLElement, canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D, panel:HTMLElement}[]} */
   let items = [];
@@ -423,56 +421,32 @@
 
   clearBtn.addEventListener('click', () => clearAll());
   addBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', (e) => {
-    if (e.target.files && e.target.files.length) {
-      handleFiles(Array.from(e.target.files));
-      fileInput.value = '';
-    }
-  });
-
-  // Drag & drop (files from OS only - ignore internal panel-reorder drags)
-  function isFileDrag(e) {
-    const types = e.dataTransfer && e.dataTransfer.types;
-    if (!types) return false;
-    for (let i = 0; i < types.length; i++) {
-      if (types[i] === 'Files') return true;
-    }
-    return false;
-  }
-  ['dragenter', 'dragover'].forEach(ev => {
-    window.addEventListener(ev, (e) => {
-      if (!isFileDrag(e)) return;
-      e.preventDefault();
-      dropHint.classList.add('dragging');
-    });
-  });
-  ['dragleave', 'drop'].forEach(ev => {
-    window.addEventListener(ev, (e) => {
-      if (!isFileDrag(e)) return;
-      e.preventDefault();
-      if (ev === 'dragleave' && e.relatedTarget) return;
-      dropHint.classList.remove('dragging');
-    });
-  });
-  window.addEventListener('drop', (e) => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    if (files.length) handleFiles(files);
+  fileDropZone = FileInputDropZone.bind({
+    zone: dropHint,
+    input: fileInput,
+    triggerElement: dropHint,
+    status: dropStatus,
+    rejectedText: '没有可用的图片，请使用图片文件。',
+    onFiles(files) {
+      handleFiles(files);
+    },
   });
 
   function clearAll() {
     items.forEach(it => URL.revokeObjectURL(it.url));
     items = [];
     grid.innerHTML = '';
+    grid.style.display = 'none';
     zoomStrip.innerHTML = '';
     zoomStrip.classList.remove('active');
     zoomResizer.classList.remove('active');
     document.body.classList.remove('has-zoom');
     dropHint.style.display = '';
+    if (fileDropZone) fileDropZone.clear();
   }
 
   async function handleFiles(files) {
+    grid.style.display = '';
     files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     for (const f of files) {
       await addImage(f.name, f);
@@ -544,7 +518,9 @@
     layoutGrid();
     buildZoomPanels();
     if (items.length === 0) {
+      grid.style.display = 'none';
       dropHint.style.display = '';
+      if (fileDropZone) fileDropZone.clear();
       zoomStrip.classList.remove('active');
       zoomResizer.classList.remove('active');
       document.body.classList.remove('has-zoom');

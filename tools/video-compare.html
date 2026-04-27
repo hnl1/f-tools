@@ -78,7 +78,6 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-bottom: 12px;
         flex-shrink: 0;
       }
       h1 {
@@ -110,10 +109,10 @@
         background: var(--surface-hover);
         color: var(--text);
         border: 1px solid var(--border-strong);
-        padding: 6px 12px;
+        padding: 3px 10px;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 13px;
+        font-size: 12px;
       }
       button:hover {
         background: var(--surface-hover-2);
@@ -123,8 +122,8 @@
         color: var(--danger);
       }
       #theme-toggle {
-        padding: 6px 10px;
-        font-size: 14px;
+        padding: 3px 8px;
+        font-size: 13px;
         line-height: 1;
       }
       .grid {
@@ -199,6 +198,18 @@
         background: #000;
         display: block;
       }
+      #drop-hint {
+        flex: 1 1 auto;
+        margin: 40px;
+        padding: 60px;
+        text-align: center;
+        font-size: 18px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+      }
       .empty {
         padding: 80px 24px;
         text-align: center;
@@ -212,19 +223,35 @@
   </head>
   <body class="tool-page">
     <header>
-      <a href="../index.html" class="back-link">← 返回</a>
+      <a href="../index.html" class="back-link">主页</a>
       <h1>视频对比</h1>
-      <span class="hint">从 Finder 拖动视频到此页面即可加入对比</span>
       <div class="controls">
         <button id="sync-toggle">同时播放</button>
         <button id="sync-reset">回到 0s</button>
+        <button id="add-btn" type="button">添加视频</button>
         <button id="clear" class="danger">清空</button>
         <button id="theme-toggle" type="button" title="切换主题">🌙</button>
+        <input type="file" id="file-input" class="visually-hidden-file" accept="video/*,.mp4,.mov,.webm,.mkv,.m4v" multiple aria-label="选择视频文件">
       </div>
     </header>
 
+    <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="video-drop-title">
+      <div class="file-drop-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 4v12"></path>
+          <path d="m7 9 5-5 5 5"></path>
+          <path d="M5 18v2h14v-2"></path>
+        </svg>
+      </div>
+      <div>
+        <div id="video-drop-title" class="file-drop-title">拖入、粘贴或点击添加视频</div>
+      </div>
+      <div id="video-drop-status" class="file-drop-status" hidden></div>
+    </div>
+
     <div id="grid" class="grid"></div>
 
+    <script src="../assets/file-input.js"></script>
     <script>
       (function setupThemeToggle() {
         const btn = document.getElementById("theme-toggle");
@@ -269,18 +296,24 @@
       })();
 
       const grid = document.getElementById("grid");
+      const dropHint = document.getElementById("drop-hint");
+      const fileInput = document.getElementById("file-input");
+      const addBtn = document.getElementById("add-btn");
+      const dropStatus = document.getElementById("video-drop-status");
       const items = [];
+      let fileDropZone = null;
 
       function render() {
         grid.innerHTML = "";
         if (items.length === 0) {
-          const empty = document.createElement("div");
-          empty.className = "empty";
-          empty.textContent = "把视频文件拖进来开始对比";
+          if (fileDropZone) fileDropZone.clear();
+          dropHint.style.display = "";
+          grid.style.display = "none";
           grid.style.gridTemplateColumns = "1fr";
-          grid.appendChild(empty);
           return;
         }
+        dropHint.style.display = "none";
+        grid.style.display = "";
         grid.style.gridTemplateColumns = `repeat(${items.length}, minmax(0, 1fr))`;
         items.forEach((item, idx) => {
           const cell = document.createElement("div");
@@ -397,23 +430,16 @@
         render();
       }
 
-      window.addEventListener("dragover", (e) => {
-        if (isCellDrag(e)) return;
-        e.preventDefault();
-        document.body.classList.add("dragging");
-      });
-      window.addEventListener("dragleave", (e) => {
-        if (e.target === document.documentElement || e.relatedTarget === null) {
-          document.body.classList.remove("dragging");
-        }
-      });
-      window.addEventListener("drop", (e) => {
-        if (isCellDrag(e)) return;
-        e.preventDefault();
-        document.body.classList.remove("dragging");
-        if (e.dataTransfer && e.dataTransfer.files) {
-          addFiles(e.dataTransfer.files);
-        }
+      addBtn.addEventListener("click", () => fileInput.click());
+      fileDropZone = FileInputDropZone.bind({
+        zone: dropHint,
+        input: fileInput,
+        triggerElement: dropHint,
+        status: dropStatus,
+        rejectedText: "没有可用的视频，请使用视频文件。",
+        onFiles(files) {
+          addFiles(files);
+        },
       });
 
       const toggleBtn = document.getElementById("sync-toggle");

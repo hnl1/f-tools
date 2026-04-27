@@ -28,6 +28,10 @@
   --accent: #2563eb;
   --accent-strong: #1d4ed8;
   --accent-tint: rgba(37, 99, 235, 0.08);
+  --file-drop-icon: #64748b;
+  --file-drop-title: #475569;
+  --file-drop-icon-active: var(--accent);
+  --file-drop-title-active: var(--accent-strong);
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
   --shadow-hover: 0 10px 28px -12px rgba(37, 99, 235, 0.35);
 }
@@ -53,6 +57,10 @@
   --accent: #60a5fa;
   --accent-strong: #3b82f6;
   --accent-tint: rgba(96, 165, 250, 0.12);
+  --file-drop-icon: #94a3b8;
+  --file-drop-title: #cbd5e1;
+  --file-drop-icon-active: var(--accent);
+  --file-drop-title-active: #93c5fd;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
   --shadow-hover: 0 10px 28px -12px rgba(96, 165, 250, 0.45);
 }
@@ -166,6 +174,102 @@ body.tool-page #drop-hint.dragging {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-tint);
+}
+
+body.tool-page .visually-hidden-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+body.tool-page .file-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px;
+  text-align: center;
+  font-size: 18px;
+  background: var(--surface);
+  border: 2px dashed var(--button-border);
+  border-radius: var(--ft-radius-lg);
+  color: var(--file-drop-icon);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: border-color var(--ft-transition), background var(--ft-transition),
+    color var(--ft-transition), box-shadow var(--ft-transition),
+    transform var(--ft-transition);
+}
+
+body.tool-page .file-drop-zone:hover,
+body.tool-page .file-drop-zone:focus-visible,
+body.tool-page .file-drop-zone:focus-within,
+body.tool-page .file-drop-zone.dragging {
+  border-color: var(--accent);
+  color: var(--file-drop-icon-active);
+  background: var(--accent-tint);
+}
+
+body.tool-page .file-drop-zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+body.tool-page .file-drop-zone:active {
+  transform: translateY(1px);
+}
+
+body.tool-page .file-drop-zone.has-error {
+  border-color: var(--danger, #dc2626);
+  color: var(--danger, #dc2626);
+}
+
+body.tool-page .file-drop-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  color: currentColor;
+}
+
+body.tool-page .file-drop-icon svg path:last-child {
+  transform: scaleX(1.18);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+body.tool-page .file-drop-title {
+  color: var(--file-drop-title);
+  font-weight: 600;
+  transition: color var(--ft-transition);
+}
+
+body.tool-page .file-drop-zone:hover .file-drop-title,
+body.tool-page .file-drop-zone:focus-visible .file-drop-title,
+body.tool-page .file-drop-zone:focus-within .file-drop-title,
+body.tool-page .file-drop-zone.dragging .file-drop-title {
+  color: var(--file-drop-title-active);
+}
+
+body.tool-page .file-drop-zone.has-error .file-drop-title {
+  color: var(--danger, #dc2626);
+}
+
+body.tool-page .file-drop-status {
+  max-width: 100%;
+  word-break: break-all;
+}
+
+body.tool-page .file-drop-status[hidden] {
+  display: none;
 }
 
 body.tool-page .cell,

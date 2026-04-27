@@ -149,28 +149,14 @@
     flex: 1 1 auto;
     margin: 40px;
     padding: 60px;
-    border: 2px dashed var(--button-border);
-    border-radius: 12px;
     text-align: center;
-    color: var(--text-faint);
     font-size: 18px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 12px;
   }
-  #drop-hint.dragging {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: var(--accent-tint);
-  }
-  #drop-hint small {
-    display: block;
-    margin-top: 12px;
-    font-size: 13px;
-    color: var(--text-fainter);
-  }
-
   #grid {
     flex: 1 1 0;
     min-height: 0;
@@ -282,7 +268,7 @@
 </head>
 <body class="tool-page">
 <header>
-  <a href="../index.html" class="back-link">← 返回</a>
+  <a href="../index.html" class="back-link">主页</a>
   <h1>PDF 对比</h1>
   <div class="controls">
     <label title="同步滚动方式">
@@ -303,20 +289,30 @@
       </select>
     </label>
     <button id="clear-btn">清空</button>
-    <button id="add-btn">添加 PDF</button>
+    <button id="add-btn" type="button">添加 PDF</button>
     <button id="theme-toggle" type="button" title="切换主题">🌙</button>
-    <input type="file" id="file-input" accept="application/pdf,.pdf" multiple style="display:none">
+    <input type="file" id="file-input" class="visually-hidden-file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
   </div>
 </header>
 
-<div id="drop-hint">
-  拖拽 PDF 到此处
-  <small>支持多个 PDF，按文件名排序后横向平铺；任一列上下滚动时，其它列会同步滚动</small>
+<div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="pdf-drop-title">
+  <div class="file-drop-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4v12"></path>
+      <path d="m7 9 5-5 5 5"></path>
+      <path d="M5 18v2h14v-2"></path>
+    </svg>
+  </div>
+  <div>
+    <div id="pdf-drop-title" class="file-drop-title">拖入、粘贴或点击添加 PDF</div>
+  </div>
+  <div id="pdf-drop-status" class="file-drop-status" hidden></div>
 </div>
 
 <div id="grid" style="display:none"></div>
 
 <script src="../vendor/pdfjs/pdf.min.js"></script>
+<script src="../assets/file-input.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
@@ -367,9 +363,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   const clearBtn = document.getElementById('clear-btn');
   const addBtn = document.getElementById('add-btn');
   const fileInput = document.getElementById('file-input');
+  const dropStatus = document.getElementById('pdf-drop-status');
   const syncModeSel = document.getElementById('sync-mode');
   const dprSel = document.getElementById('dpr');
-  const backLink = document.querySelector('.back-link');
+  let fileDropZone = null;
 
   /** @type {{name:string, file:File, pdf:any, col:HTMLElement, scroller:HTMLElement, pagesEl:HTMLElement, pageEls:HTMLElement[], pageOffsets:number[], numPages:number}[]} */
   let items = [];
@@ -377,8 +374,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   let renderScale = parseFloat(dprSel.value);
   let syncMode = syncModeSel.value;
   let isSyncing = false;
-
-  setupBackLink();
 
   syncModeSel.addEventListener('change', () => { syncMode = syncModeSel.value; });
   dprSel.addEventListener('change', async () => {
@@ -388,52 +383,27 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
   clearBtn.addEventListener('click', clearAll);
   addBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', (e) => {
-    if (e.target.files && e.target.files.length) {
-      handleFiles(Array.from(e.target.files));
-      fileInput.value = '';
-    }
-  });
-
-  function isFileDrag(e) {
-    const types = e.dataTransfer && e.dataTransfer.types;
-    if (!types) return false;
-    for (let i = 0; i < types.length; i++) {
-      if (types[i] === 'Files') return true;
-    }
-    return false;
-  }
-  ['dragenter', 'dragover'].forEach(ev => {
-    window.addEventListener(ev, (e) => {
-      if (!isFileDrag(e)) return;
-      e.preventDefault();
-      dropHint.classList.add('dragging');
-    });
-  });
-  ['dragleave', 'drop'].forEach(ev => {
-    window.addEventListener(ev, (e) => {
-      if (!isFileDrag(e)) return;
-      e.preventDefault();
-      if (ev === 'dragleave' && e.relatedTarget) return;
-      dropHint.classList.remove('dragging');
-    });
-  });
-  window.addEventListener('drop', (e) => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).filter(
-      f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
-    );
-    if (files.length) handleFiles(files);
+  fileDropZone = FileInputDropZone.bind({
+    zone: dropHint,
+    input: fileInput,
+    triggerElement: dropHint,
+    status: dropStatus,
+    rejectedText: '没有可用的 PDF，请使用 .pdf 文件。',
+    onFiles(files) {
+      handleFiles(files);
+    },
   });
 
   loadTransferredPdfs();
 
-  function setupBackLink() {
-    const params = new URLSearchParams(window.location.search);
-    const from = params.get('from');
-    if (!backLink || from !== 'pdf-to-image.html') return;
-    backLink.href = 'pdf-to-image.html';
+  function setDropStatus(message) {
+    dropStatus.textContent = message;
+    dropStatus.hidden = !message;
+    if (message) {
+      dropHint.setAttribute('aria-describedby', dropStatus.id);
+    } else {
+      dropHint.removeAttribute('aria-describedby');
+    }
   }
 
   function openTransferDb() {
@@ -485,7 +455,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     if (!transferId) return;
 
     dropHint.style.display = '';
-    dropHint.innerHTML = '正在加载转换结果...<small>将自动载入原始 PDF 和图片版 PDF</small>';
+    setDropStatus('正在加载转换结果，将自动载入原始 PDF 和图片版 PDF');
 
     try {
       const record = await getTransfer(transferId);
@@ -503,7 +473,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     } catch (err) {
       console.error(err);
       dropHint.style.display = '';
-      dropHint.innerHTML = `加载转换结果失败<small>${err && err.message ? err.message : err}</small>`;
+      setDropStatus(`加载转换结果失败：${err && err.message ? err.message : err}`);
     }
   }
 
@@ -513,6 +483,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     grid.innerHTML = '';
     grid.style.display = 'none';
     dropHint.style.display = '';
+    if (fileDropZone) fileDropZone.clear();
   }
 
   async function handleFiles(files) {
@@ -656,6 +627,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     if (items.length === 0) {
       grid.style.display = 'none';
       dropHint.style.display = '';
+      if (fileDropZone) fileDropZone.clear();
     }
   }
 

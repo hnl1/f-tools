@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF 转图片版 PDF</title>
+<title>PDF 转图片版</title>
 <script>
   (function () {
     var pref = null;
@@ -75,9 +75,9 @@
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 14px;
-    white-space: nowrap;
-    overflow-x: auto;
+    white-space: normal;
     z-index: 10;
   }
   header h1 {
@@ -131,43 +131,22 @@
     line-height: 1;
   }
   main {
-    width: min(1040px, 100%);
-    margin: 0 auto;
-    padding: 28px 20px 40px;
-    display: grid;
-    grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
-    gap: 20px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
   }
-  .panel,
-  .preview {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
+  body.tool-page .panel.upload-panel {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
   }
   .panel {
     align-self: start;
   }
-  .panel-head,
-  .preview-head {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .panel-head h2,
-  .preview-head h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-  }
-  .panel-head p,
-  .preview-head p {
-    margin: 6px 0 0;
-    color: var(--text-muted);
-    font-size: 13px;
-    line-height: 1.5;
-  }
   .form {
-    padding: 16px;
+    padding: 40px;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -182,6 +161,49 @@
   label span {
     color: var(--text);
     font-weight: 500;
+  }
+  .toolbar {
+    display: grid;
+    grid-template-columns: minmax(160px, 220px) auto;
+    align-items: end;
+    gap: 12px;
+  }
+  .header-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex: 0 1 auto;
+  }
+  .header-toolbar .actions {
+    margin: 0;
+    gap: 8px;
+  }
+  #add-pdf-btn[hidden] {
+    display: none;
+  }
+  .file-drop-zone {
+    min-height: calc(100vh - 144px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 60px;
+    text-align: center;
+    font-size: 18px;
+  }
+  .file-drop-zone.compact {
+    position: absolute;
+    width: 1px;
+    min-height: 0;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
   }
   input[type="file"],
   input[type="number"],
@@ -205,6 +227,9 @@
     gap: 10px;
     margin-top: 4px;
   }
+  .toolbar .actions {
+    margin: 0;
+  }
   .button.primary {
     background: var(--accent);
     border-color: var(--accent);
@@ -220,53 +245,66 @@
   .button[hidden] {
     display: none;
   }
-  #log {
-    margin: 2px 16px 16px;
-    min-height: 72px;
-    padding: 12px;
-    border-radius: 8px;
-    background: var(--surface-soft);
-    color: var(--text-muted);
-    white-space: pre-wrap;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  .pdf-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .pdf-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px;
+    align-items: start;
+  }
+  .pdf-info {
+    min-width: 0;
+    padding: 4px 0;
+  }
+  .pdf-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pdf-status {
+    margin-top: 4px;
     font-size: 12px;
+    color: var(--text-muted);
     line-height: 1.5;
   }
-  #log.error {
+  .pdf-status[hidden] {
+    display: none;
+  }
+  .pdf-status.error {
     color: var(--danger);
   }
-  .preview-body {
-    min-height: 420px;
-    padding: 16px;
-    background: var(--preview-bg);
+  .pdf-actions {
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    overflow: auto;
-  }
-  #preview-canvas {
-    display: none;
-    max-width: 100%;
-    height: auto;
-    background: #fff;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  }
-  .empty-preview {
-    color: var(--text-faint);
-    font-size: 14px;
-    align-self: center;
-    text-align: center;
-  }
-  .preview.has-content .empty-preview {
-    display: none;
-  }
-  .preview.has-content #preview-canvas {
-    display: block;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
   }
   @media (max-width: 820px) {
     main {
+      padding: 0;
+    }
+    .toolbar,
+    .pdf-item {
       grid-template-columns: 1fr;
-      padding: 18px 12px 28px;
+    }
+    .pdf-actions {
+      justify-content: flex-start;
+    }
+  }
+  @media (max-width: 560px) {
+    header .spacer {
+      display: none;
+    }
+    .header-toolbar {
+      order: 3;
+      flex: 1 0 100%;
     }
   }
 </style>
@@ -274,65 +312,46 @@
 </head>
 <body class="tool-page">
 <header>
-  <a href="../index.html" class="back-link">← 返回</a>
-  <h1>PDF 转图片版 PDF</h1>
+  <a href="../index.html" class="back-link">主页</a>
+  <h1>PDF 转图片版</h1>
   <div class="spacer"></div>
+  <div class="header-toolbar" aria-label="批量转换操作">
+    <div class="actions">
+      <button class="button" id="add-pdf-btn" type="button" hidden>添加 PDF</button>
+      <button class="button primary" id="generate-all-btn" type="button" disabled>转换</button>
+      <button class="button" id="download-all-btn" type="button" disabled>下载</button>
+    </div>
+  </div>
   <button id="theme-toggle" type="button" title="切换主题">🌙</button>
 </header>
 
 <main>
-  <section class="panel">
-    <div class="panel-head">
-      <h2>生成图片版 PDF</h2>
-      <p>把每页 PDF 渲染成图片，再重新封装成 PDF，适合验证“图片化”后的展示效果。</p>
-    </div>
+  <section class="panel upload-panel">
     <div class="form">
-      <label for="pdf-file">
-        <span>选择 PDF</span>
-        <input id="pdf-file" type="file" accept="application/pdf,.pdf">
-      </label>
-
-      <label for="scale">
-        <span>渲染倍率</span>
-        <input id="scale" type="number" min="1" max="5" step="0.5" value="2">
-        <small class="hint">倍率越高越清晰，生成文件也越大。</small>
-      </label>
-
-      <label for="format">
-        <span>图片格式</span>
-        <select id="format">
-          <option value="JPEG" selected>JPEG，高质量，文件较小</option>
-          <option value="PNG">PNG，无损，文件较大</option>
-        </select>
-      </label>
-
-      <label for="quality">
-        <span>JPEG 质量</span>
-        <input id="quality" type="number" min="0.1" max="1" step="0.05" value="0.95">
-      </label>
-
-      <div class="actions">
-        <button class="button primary" id="convert-btn" type="button">生成并下载</button>
-        <button class="button" id="compare-btn" type="button" hidden>去 PDF 对比</button>
+      <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="pdf-to-image-drop-title">
+        <input id="pdf-file" class="visually-hidden-file" type="file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
+        <div class="file-drop-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 4v12"></path>
+            <path d="m7 9 5-5 5 5"></path>
+            <path d="M5 18v2h14v-2"></path>
+          </svg>
+        </div>
+        <div>
+          <div id="pdf-to-image-drop-title" class="file-drop-title">拖入、粘贴或点击添加 PDF</div>
+        </div>
+        <div id="pdf-to-image-drop-status" class="file-drop-status" hidden></div>
       </div>
-    </div>
-    <div id="log">等待选择 PDF...</div>
-  </section>
 
-  <section class="preview" id="preview">
-    <div class="preview-head">
-      <h2>第一页预览</h2>
-      <p>转换时会把第一页同步渲染到这里，方便快速检查清晰度和背景。</p>
-    </div>
-    <div class="preview-body">
-      <div class="empty-preview">生成后显示预览</div>
-      <canvas id="preview-canvas"></canvas>
+      <div id="pdf-list" class="pdf-list" aria-live="polite">
+      </div>
     </div>
   </section>
 </main>
 
 <script src="../vendor/pdfjs/pdf.min.js"></script>
 <script src="../vendor/jspdf/jspdf.umd.min.js"></script>
+<script src="../assets/file-input.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
@@ -379,21 +398,140 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   }
 
   const fileInput = document.getElementById('pdf-file');
-  const convertBtn = document.getElementById('convert-btn');
-  const compareBtn = document.getElementById('compare-btn');
-  const scaleInput = document.getElementById('scale');
-  const formatInput = document.getElementById('format');
-  const qualityInput = document.getElementById('quality');
+  const dropHint = document.getElementById('drop-hint');
+  const dropStatus = document.getElementById('pdf-to-image-drop-status');
+  const addPdfBtn = document.getElementById('add-pdf-btn');
+  const generateAllBtn = document.getElementById('generate-all-btn');
+  const downloadAllBtn = document.getElementById('download-all-btn');
+  const pdfList = document.getElementById('pdf-list');
   const logEl = document.getElementById('log');
-  const preview = document.getElementById('preview');
-  const previewCanvas = document.getElementById('preview-canvas');
-  const previewContext = previewCanvas.getContext('2d');
+  const RENDER_SCALE = 2;
 
-  let compareUrl = '';
+  /** @type {{id:string, file:File, status:string, outputBlob:Blob|null, outputName:string, compareUrl:string, error:string, elements:any}[]} */
+  let items = [];
+  let nextItemId = 1;
+  let isGenerating = false;
 
   function log(message, isError = false) {
+    if (!logEl) return;
     logEl.textContent = message;
     logEl.classList.toggle('error', isError);
+  }
+
+  function isPdfFile(file) {
+    return Boolean(file) && (
+      file.type === 'application/pdf' ||
+      /\.pdf$/i.test(file.name || '')
+    );
+  }
+
+  function makeOutputName(fileName) {
+    const baseName = (fileName || 'converted').replace(/\.pdf$/i, '');
+    return `${baseName}-images.pdf`;
+  }
+
+  function updateGlobalControls() {
+    const hasItems = items.length > 0;
+    const hasGenerated = items.some((item) => item.outputBlob);
+    addPdfBtn.hidden = !hasItems;
+    generateAllBtn.disabled = !hasItems || isGenerating;
+    downloadAllBtn.disabled = !hasGenerated || isGenerating;
+    pdfList.hidden = !hasItems;
+    dropHint.classList.toggle('compact', hasItems);
+  }
+
+  function setItemStatus(item, status, message, isError = false) {
+    item.status = status;
+    item.error = isError ? message : '';
+    item.elements.status.textContent = message;
+    item.elements.status.hidden = !message;
+    item.elements.status.classList.toggle('error', isError);
+    item.elements.generateBtn.disabled = isGenerating || status === 'generating';
+    item.elements.downloadBtn.hidden = !item.outputBlob;
+    item.elements.compareBtn.hidden = !item.compareUrl;
+    updateGlobalControls();
+  }
+
+  function addPdfFiles(files, sourceLabel) {
+    const pdfFiles = Array.from(files || []).filter(isPdfFile);
+    if (!pdfFiles.length) {
+      log(`${sourceLabel}的文件不是 PDF，请使用 .pdf 文件。`, true);
+      return;
+    }
+
+    pdfFiles.forEach(addPdfItem);
+    log(`已${sourceLabel} ${pdfFiles.length} 个 PDF，可单独转换或点击“转换”。`);
+    updateGlobalControls();
+  }
+
+  function addPdfItem(file) {
+    const item = {
+      id: `pdf-item-${nextItemId++}`,
+      file,
+      status: 'pending',
+      outputBlob: null,
+      outputName: makeOutputName(file.name),
+      compareUrl: '',
+      error: '',
+      elements: {},
+    };
+
+    const row = document.createElement('div');
+    row.className = 'pdf-item';
+    row.dataset.itemId = item.id;
+
+    const info = document.createElement('div');
+    info.className = 'pdf-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'pdf-name';
+    nameEl.textContent = file.name || '未命名 PDF';
+    nameEl.title = nameEl.textContent;
+
+    const statusEl = document.createElement('div');
+    statusEl.className = 'pdf-status';
+    statusEl.hidden = true;
+
+    info.appendChild(nameEl);
+    info.appendChild(statusEl);
+
+    const actions = document.createElement('div');
+    actions.className = 'pdf-actions';
+
+    const generateBtn = document.createElement('button');
+    generateBtn.className = 'button primary';
+    generateBtn.type = 'button';
+    generateBtn.textContent = '转换';
+
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'button';
+    downloadBtn.type = 'button';
+    downloadBtn.textContent = '下载';
+    downloadBtn.hidden = true;
+
+    const compareBtn = document.createElement('button');
+    compareBtn.className = 'button';
+    compareBtn.type = 'button';
+    compareBtn.textContent = '比较';
+    compareBtn.hidden = true;
+
+    actions.appendChild(generateBtn);
+    actions.appendChild(downloadBtn);
+    actions.appendChild(compareBtn);
+    row.appendChild(info);
+    row.appendChild(actions);
+    pdfList.appendChild(row);
+
+    item.elements = { row, status: statusEl, generateBtn, downloadBtn, compareBtn };
+    items.push(item);
+
+    generateBtn.addEventListener('click', () => generateOne(item));
+    downloadBtn.addEventListener('click', () => {
+      if (item.outputBlob) downloadBlob(item.outputBlob, item.outputName);
+    });
+    compareBtn.addEventListener('click', () => {
+      if (item.compareUrl) window.open(item.compareUrl, '_blank', 'noopener');
+    });
   }
 
   function downloadBlob(blob, filename) {
@@ -462,7 +600,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     return `pdf-compare.html?from=pdf-to-image.html&transfer=${encodeURIComponent(id)}`;
   }
 
-  async function renderPageToImage(page, scale, imageFormat, jpegQuality) {
+  async function renderPageToImage(page, scale) {
     const outputViewport = page.getViewport({ scale: 1 });
     const renderViewport = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
@@ -480,17 +618,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
       background: 'white',
     }).promise;
 
-    if (page.pageNumber === 1) {
-      previewCanvas.width = canvas.width;
-      previewCanvas.height = canvas.height;
-      previewContext.drawImage(canvas, 0, 0);
-      preview.classList.add('has-content');
-    }
-
-    const mimeType = imageFormat === 'PNG' ? 'image/png' : 'image/jpeg';
-    const dataUrl = imageFormat === 'PNG'
-      ? canvas.toDataURL(mimeType)
-      : canvas.toDataURL(mimeType, jpegQuality);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
     return {
       dataUrl,
@@ -499,20 +627,17 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     };
   }
 
-  async function convertPdfToImagePdf(file) {
+  async function convertPdfToImagePdf(file, onProgress) {
     const arrayBuffer = await file.arrayBuffer();
     const sourcePdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-    const scale = Number(scaleInput.value) || 2;
-    const imageFormat = formatInput.value;
-    const jpegQuality = Number(qualityInput.value) || 0.95;
     const { jsPDF } = window.jspdf;
     let outputPdf = null;
 
     for (let pageNumber = 1; pageNumber <= sourcePdf.numPages; pageNumber += 1) {
-      log(`正在处理第 ${pageNumber} / ${sourcePdf.numPages} 页...`);
+      onProgress(pageNumber, sourcePdf.numPages);
 
       const page = await sourcePdf.getPage(pageNumber);
-      const image = await renderPageToImage(page, scale, imageFormat, jpegQuality);
+      const image = await renderPageToImage(page, RENDER_SCALE);
       const orientation = image.width > image.height ? 'landscape' : 'portrait';
 
       if (!outputPdf) {
@@ -528,7 +653,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
       outputPdf.addImage(
         image.dataUrl,
-        imageFormat,
+        'JPEG',
         0,
         0,
         image.width,
@@ -541,48 +666,135 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     try { await sourcePdf.destroy(); } catch (_) {}
 
     const blob = outputPdf.output('blob');
-    const outputName = file.name.replace(/\.pdf$/i, '') + '-图片版.pdf';
-    downloadBlob(blob, outputName);
-    compareUrl = await storeForCompare(file, blob, outputName);
-    compareBtn.hidden = false;
-    log(`完成：已生成 ${outputName}\n可点击“去 PDF 对比”查看原始 PDF 与图片版 PDF。`);
+    return blob;
   }
 
-  convertBtn.addEventListener('click', async () => {
-    const file = fileInput.files && fileInput.files[0];
-
-    if (!file) {
-      log('请先选择一个 PDF 文件。', true);
-      return;
-    }
-
-    convertBtn.disabled = true;
-    compareBtn.hidden = true;
-    compareUrl = '';
-    preview.classList.remove('has-content');
+  async function saveGeneratedResultForCompare(item, blob) {
+    item.outputBlob = blob;
+    item.outputName = makeOutputName(item.file.name);
+    item.compareUrl = '';
 
     try {
-      await convertPdfToImagePdf(file);
+      item.compareUrl = await storeForCompare(item.file, blob, item.outputName);
+      return true;
+    } catch (error) {
+      console.warn('prepare compare transfer failed', error);
+      return false;
+    }
+  }
+
+  async function generateOne(item) {
+    if (!item || isGenerating) return;
+
+    isGenerating = true;
+    setAllItemButtonsDisabled(true);
+    item.outputBlob = null;
+    item.compareUrl = '';
+    setItemStatus(item, 'generating', '转换中...');
+    log(`正在转换：${item.file.name}`);
+
+    try {
+      const blob = await convertPdfToImagePdf(item.file, (pageNumber, pageCount) => {
+        const message = `转换中：第 ${pageNumber} / ${pageCount} 页`;
+        item.elements.status.textContent = message;
+        log(`${item.file.name}\n${message}`);
+      });
+      const canCompare = await saveGeneratedResultForCompare(item, blob);
+      setItemStatus(
+        item,
+        'generated',
+        canCompare
+          ? `已转换：${item.outputName}`
+          : `已转换：${item.outputName}（比较准备失败，可下载后拖入对比页）`
+      );
+      log(canCompare
+        ? `完成：${item.outputName}\n不会自动下载，可点击“下载”或“比较”。`
+        : `完成：${item.outputName}\n不会自动下载；比较入口准备失败，可下载后拖入 PDF 对比页。`);
     } catch (error) {
       console.error(error);
-      log('转换失败：' + (error && error.message ? error.message : String(error)), true);
+      setItemStatus(item, 'error', '转换失败：' + (error && error.message ? error.message : String(error)), true);
+      log(`${item.file.name} 转换失败：` + (error && error.message ? error.message : String(error)), true);
     } finally {
-      convertBtn.disabled = false;
+      isGenerating = false;
+      setAllItemButtonsDisabled(false);
+      updateGlobalControls();
     }
+  }
+
+  async function generateAll() {
+    if (isGenerating || !items.length) return;
+
+    isGenerating = true;
+    setAllItemButtonsDisabled(true);
+    updateGlobalControls();
+    log(`开始转换，共 ${items.length} 个 PDF。`);
+
+    try {
+      for (let index = 0; index < items.length; index += 1) {
+        const item = items[index];
+        item.outputBlob = null;
+        item.compareUrl = '';
+        setItemStatus(item, 'generating', `转换中...（${index + 1} / ${items.length}）`);
+        log(`正在转换 ${index + 1} / ${items.length}：${item.file.name}`);
+
+        try {
+          const blob = await convertPdfToImagePdf(item.file, (pageNumber, pageCount) => {
+            const message = `转换中：第 ${pageNumber} / ${pageCount} 页`;
+            item.elements.status.textContent = `${message}（${index + 1} / ${items.length}）`;
+            log(`${item.file.name}\n${message}\n队列：${index + 1} / ${items.length}`);
+          });
+          const canCompare = await saveGeneratedResultForCompare(item, blob);
+          setItemStatus(
+            item,
+            'generated',
+            canCompare
+              ? `已转换：${item.outputName}`
+              : `已转换：${item.outputName}（比较准备失败，可下载后拖入对比页）`
+          );
+        } catch (error) {
+          console.error(error);
+          setItemStatus(item, 'error', '转换失败：' + (error && error.message ? error.message : String(error)), true);
+        }
+      }
+      log('转换完成。不会自动下载，可点击“下载”或单项下载。');
+    } finally {
+      isGenerating = false;
+      setAllItemButtonsDisabled(false);
+      updateGlobalControls();
+    }
+  }
+
+  function setAllItemButtonsDisabled(disabled) {
+    items.forEach((item) => {
+      item.elements.generateBtn.disabled = disabled;
+      item.elements.downloadBtn.disabled = disabled;
+      item.elements.compareBtn.disabled = disabled;
+    });
+  }
+
+  function downloadAllGenerated() {
+    const generatedItems = items.filter((item) => item.outputBlob);
+    generatedItems.forEach((item) => downloadBlob(item.outputBlob, item.outputName));
+    log(`已触发 ${generatedItems.length} 个文件下载。`);
+  }
+
+  addPdfBtn.addEventListener('click', () => fileInput.click());
+  generateAllBtn.addEventListener('click', generateAll);
+  downloadAllBtn.addEventListener('click', downloadAllGenerated);
+
+  FileInputDropZone.bind({
+    zone: '#drop-hint',
+    input: fileInput,
+    triggerElement: dropHint,
+    status: dropStatus,
+    rejectedText: '文件不是 PDF，请使用 .pdf 文件。',
+    multiple: true,
+    onFiles(files, detail) {
+      addPdfFiles(files, detail.sourceLabel);
+    },
   });
 
-  compareBtn.addEventListener('click', () => {
-    if (!compareUrl) return;
-    window.location.href = compareUrl;
-  });
-
-  fileInput.addEventListener('change', () => {
-    const file = fileInput.files && fileInput.files[0];
-    compareBtn.hidden = true;
-    compareUrl = '';
-    preview.classList.remove('has-content');
-    log(file ? `已选择：${file.name}` : '等待选择 PDF...');
-  });
+  updateGlobalControls();
 })();
 </script>
 </body>
