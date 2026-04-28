@@ -3,18 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>图片对比</title>
-<script>
-  (function () {
-    var pref = null;
-    try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
-    if (pref !== 'light' && pref !== 'dark') pref = 'auto';
-    var actual = pref === 'auto'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : pref;
-    document.documentElement.setAttribute('data-theme', actual);
-    document.documentElement.setAttribute('data-theme-pref', pref);
-  })();
-</script>
+<script src="../assets/tool-header.js"></script>
 <style>
   :root[data-theme="dark"] {
     color-scheme: dark;
@@ -70,46 +59,7 @@
     display: flex;
     flex-direction: column;
   }
-  header {
-    flex: 0 0 auto;
-    padding: 8px 14px;
-    background: var(--header-bg);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-    overflow-x: auto;
-    z-index: 10;
-  }
-  header h1 {
-    font-size: 14px;
-    margin: 0;
-    font-weight: 500;
-    flex: 0 0 auto;
-  }
-  header .back-link {
-    color: var(--text-faint);
-    text-decoration: none;
-    font-size: 13px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    flex: 0 0 auto;
-  }
-  header .back-link:hover {
-    color: var(--text);
-    background: var(--button-hover);
-  }
-  header .controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: nowrap;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  header label {
+  .tool-header label {
     font-size: 12px;
     color: var(--text-muted);
     display: flex;
@@ -117,24 +67,8 @@
     gap: 6px;
     flex: 0 0 auto;
   }
-  header input[type="range"] {
+  .tool-header input[type="range"] {
     width: 120px;
-  }
-  header button {
-    background: var(--button-bg);
-    color: var(--text);
-    border: 1px solid var(--button-border);
-    padding: 3px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    flex: 0 0 auto;
-  }
-  header button:hover { background: var(--button-hover); }
-  #theme-toggle {
-    padding: 3px 8px;
-    font-size: 13px;
-    line-height: 1;
   }
 
   #drop-hint {
@@ -288,21 +222,16 @@
 <link rel="stylesheet" href="../assets/common.css">
 </head>
 <body class="tool-page">
-<header>
-  <a href="../index.html" class="back-link" aria-label="主页" title="主页"></a>
-  <h1>图片对比</h1>
-  <div class="controls">
-    <label title="取样区域占图片短边的比例（与各图分辨率无关，对应内容上的同一块区域）">
-      取样区域
-      <input type="range" id="region-frac" min="5" max="50" step="5" value="25">
-      <span id="region-frac-value">25%</span>
-    </label>
-    <button id="clear-btn">清空</button>
-    <button id="add-btn" type="button">添加图片</button>
-    <button id="theme-toggle" type="button" title="切换主题">🌙</button>
-    <input type="file" id="file-input" class="visually-hidden-file" accept="image/*" multiple aria-label="选择图片文件">
-  </div>
-</header>
+<div id="header-controls" hidden>
+  <label title="取样区域占图片短边的比例（与各图分辨率无关，对应内容上的同一块区域）">
+    取样区域
+    <input type="range" id="region-frac" min="5" max="50" step="5" value="25">
+    <span id="region-frac-value">25%</span>
+  </label>
+  <button id="clear-btn">清空</button>
+  <button id="add-btn" type="button">添加图片</button>
+  <input type="file" id="file-input" class="visually-hidden-file" accept="image/*" multiple aria-label="选择图片文件">
+</div>
 
 <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="image-drop-title">
   <div class="file-drop-icon" aria-hidden="true">
@@ -313,7 +242,7 @@
     </svg>
   </div>
   <div>
-    <div id="image-drop-title" class="file-drop-title">拖入、粘贴或点击添加图片</div>
+    <div id="image-drop-title" class="file-drop-title"></div>
   </div>
   <div id="image-drop-status" class="file-drop-status" hidden></div>
 </div>
@@ -326,46 +255,12 @@
 <script src="../assets/file-input.js"></script>
 <script>
 (() => {
-  const themeBtn = document.getElementById('theme-toggle');
-  if (themeBtn) {
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const ICONS = {
-      auto: { icon: '🖥️', title: '跟随系统（点击切到亮色）' },
-      light: { icon: '☀️', title: '亮色（点击切到暗色）' },
-      dark: { icon: '🌙', title: '暗色（点击切到跟随系统）' },
-    };
-    const getPref = () => {
-      let p = null;
-      try { p = localStorage.getItem('f-tools-theme'); } catch (e) {}
-      return p === 'light' || p === 'dark' ? p : 'auto';
-    };
-    const apply = (pref) => {
-      const actual = pref === 'auto' ? (mql.matches ? 'dark' : 'light') : pref;
-      document.documentElement.setAttribute('data-theme', actual);
-      document.documentElement.setAttribute('data-theme-pref', pref);
-      themeBtn.textContent = ICONS[pref].icon;
-      themeBtn.title = ICONS[pref].title;
-    };
-    const setPref = (p) => {
-      try {
-        if (p === 'auto') localStorage.removeItem('f-tools-theme');
-        else localStorage.setItem('f-tools-theme', p);
-      } catch (e) {}
-      apply(p);
-    };
-    themeBtn.addEventListener('click', () => {
-      const cur = getPref();
-      setPref(cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto');
-    });
-    mql.addEventListener('change', () => {
-      if (getPref() === 'auto') apply('auto');
-    });
-    window.addEventListener('storage', (e) => {
-      if (e.key !== 'f-tools-theme') return;
-      apply(getPref());
-    });
-    apply(getPref());
-  }
+  const headerControlsHost = document.getElementById('header-controls');
+  ToolHeader.mount({
+    title: '图片对比',
+    controls: Array.from(headerControlsHost.children),
+  });
+  headerControlsHost.remove();
 
   const grid = document.getElementById('grid');
   const dropHint = document.getElementById('drop-hint');
@@ -420,13 +315,13 @@
   });
 
   clearBtn.addEventListener('click', () => clearAll());
-  addBtn.addEventListener('click', () => fileInput.click());
   fileDropZone = FileInputDropZone.bind({
     zone: dropHint,
     input: fileInput,
     triggerElement: dropHint,
+    triggerButton: addBtn,
     status: dropStatus,
-    rejectedText: '没有可用的图片，请使用图片文件。',
+    subject: '图片',
     onFiles(files) {
       handleFiles(files);
     },
@@ -441,7 +336,6 @@
     zoomStrip.classList.remove('active');
     zoomResizer.classList.remove('active');
     document.body.classList.remove('has-zoom');
-    dropHint.style.display = '';
     if (fileDropZone) fileDropZone.clear();
   }
 
@@ -453,7 +347,7 @@
     }
     layoutGrid();
     buildZoomPanels();
-    dropHint.style.display = items.length ? 'none' : '';
+    if (fileDropZone) fileDropZone.setHasItems(items.length > 0);
   }
 
   function addImage(name, blob) {
@@ -519,7 +413,6 @@
     buildZoomPanels();
     if (items.length === 0) {
       grid.style.display = 'none';
-      dropHint.style.display = '';
       if (fileDropZone) fileDropZone.clear();
       zoomStrip.classList.remove('active');
       zoomResizer.classList.remove('active');

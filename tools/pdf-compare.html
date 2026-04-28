@@ -3,18 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>PDF 对比</title>
-<script>
-  (function () {
-    var pref = null;
-    try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
-    if (pref !== 'light' && pref !== 'dark') pref = 'auto';
-    var actual = pref === 'auto'
-      ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-      : pref;
-    document.documentElement.setAttribute('data-theme', actual);
-    document.documentElement.setAttribute('data-theme-pref', pref);
-  })();
-</script>
+<script src="../assets/tool-header.js"></script>
 <style>
   :root[data-theme="dark"] {
     color-scheme: dark;
@@ -72,46 +61,7 @@
     display: flex;
     flex-direction: column;
   }
-  header {
-    flex: 0 0 auto;
-    padding: 8px 14px;
-    background: var(--header-bg);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-    overflow-x: auto;
-    z-index: 10;
-  }
-  header h1 {
-    font-size: 14px;
-    margin: 0;
-    font-weight: 500;
-    flex: 0 0 auto;
-  }
-  header .back-link {
-    color: var(--text-faint);
-    text-decoration: none;
-    font-size: 13px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    flex: 0 0 auto;
-  }
-  header .back-link:hover {
-    color: var(--text);
-    background: var(--button-hover);
-  }
-  header .controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: nowrap;
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  header label {
+  .tool-header label {
     font-size: 12px;
     color: var(--text-muted);
     display: flex;
@@ -119,30 +69,6 @@
     gap: 6px;
     flex: 0 0 auto;
     cursor: pointer;
-  }
-  header select {
-    background: var(--button-bg);
-    color: var(--text);
-    border: 1px solid var(--button-border);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 12px;
-  }
-  header button {
-    background: var(--button-bg);
-    color: var(--text);
-    border: 1px solid var(--button-border);
-    padding: 3px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    flex: 0 0 auto;
-  }
-  header button:hover { background: var(--button-hover); }
-  #theme-toggle {
-    padding: 3px 8px;
-    font-size: 13px;
-    line-height: 1;
   }
 
   #drop-hint {
@@ -267,33 +193,28 @@
 <link rel="stylesheet" href="../assets/common.css">
 </head>
 <body class="tool-page">
-<header>
-  <a href="../index.html" class="back-link" aria-label="主页" title="主页"></a>
-  <h1>PDF 对比</h1>
-  <div class="controls">
-    <label title="同步滚动方式">
-      同步
-      <select id="sync-mode">
-        <option value="ratio">按比例</option>
-        <option value="page">按页码</option>
-        <option value="off">关闭</option>
-      </select>
-    </label>
-    <label title="渲染清晰度倍数">
-      清晰度
-      <select id="dpr">
-        <option value="1">1x</option>
-        <option value="1.5">1.5x</option>
-        <option value="2" selected>2x</option>
-        <option value="3">3x</option>
-      </select>
-    </label>
-    <button id="clear-btn">清空</button>
-    <button id="add-btn" type="button">添加 PDF</button>
-    <button id="theme-toggle" type="button" title="切换主题">🌙</button>
-    <input type="file" id="file-input" class="visually-hidden-file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
-  </div>
-</header>
+<div id="header-controls" hidden>
+  <label title="同步滚动方式">
+    同步
+    <select id="sync-mode">
+      <option value="ratio">按比例</option>
+      <option value="page">按页码</option>
+      <option value="off">关闭</option>
+    </select>
+  </label>
+  <label title="渲染清晰度倍数">
+    清晰度
+    <select id="dpr">
+      <option value="1">1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2" selected>2x</option>
+      <option value="3">3x</option>
+    </select>
+  </label>
+  <button id="clear-btn">清空</button>
+  <button id="add-btn" type="button">添加 PDF</button>
+  <input type="file" id="file-input" class="visually-hidden-file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
+</div>
 
 <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="pdf-drop-title">
   <div class="file-drop-icon" aria-hidden="true">
@@ -304,7 +225,7 @@
     </svg>
   </div>
   <div>
-    <div id="pdf-drop-title" class="file-drop-title">拖入、粘贴或点击添加 PDF</div>
+    <div id="pdf-drop-title" class="file-drop-title"></div>
   </div>
   <div id="pdf-drop-status" class="file-drop-status" hidden></div>
 </div>
@@ -317,46 +238,12 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
 (() => {
-  const themeBtn = document.getElementById('theme-toggle');
-  if (themeBtn) {
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const ICONS = {
-      auto: { icon: '🖥️', title: '跟随系统（点击切到亮色）' },
-      light: { icon: '☀️', title: '亮色（点击切到暗色）' },
-      dark: { icon: '🌙', title: '暗色（点击切到跟随系统）' },
-    };
-    const getPref = () => {
-      let p = null;
-      try { p = localStorage.getItem('f-tools-theme'); } catch (e) {}
-      return p === 'light' || p === 'dark' ? p : 'auto';
-    };
-    const apply = (pref) => {
-      const actual = pref === 'auto' ? (mql.matches ? 'dark' : 'light') : pref;
-      document.documentElement.setAttribute('data-theme', actual);
-      document.documentElement.setAttribute('data-theme-pref', pref);
-      themeBtn.textContent = ICONS[pref].icon;
-      themeBtn.title = ICONS[pref].title;
-    };
-    const setPref = (p) => {
-      try {
-        if (p === 'auto') localStorage.removeItem('f-tools-theme');
-        else localStorage.setItem('f-tools-theme', p);
-      } catch (e) {}
-      apply(p);
-    };
-    themeBtn.addEventListener('click', () => {
-      const cur = getPref();
-      setPref(cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto');
-    });
-    mql.addEventListener('change', () => {
-      if (getPref() === 'auto') apply('auto');
-    });
-    window.addEventListener('storage', (e) => {
-      if (e.key !== 'f-tools-theme') return;
-      apply(getPref());
-    });
-    apply(getPref());
-  }
+  const headerControlsHost = document.getElementById('header-controls');
+  ToolHeader.mount({
+    title: 'PDF 对比',
+    controls: Array.from(headerControlsHost.children),
+  });
+  headerControlsHost.remove();
 
   const grid = document.getElementById('grid');
   const dropHint = document.getElementById('drop-hint');
@@ -382,13 +269,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   });
 
   clearBtn.addEventListener('click', clearAll);
-  addBtn.addEventListener('click', () => fileInput.click());
   fileDropZone = FileInputDropZone.bind({
     zone: dropHint,
     input: fileInput,
     triggerElement: dropHint,
+    triggerButton: addBtn,
     status: dropStatus,
-    rejectedText: '没有可用的 PDF，请使用 .pdf 文件。',
+    subject: 'PDF',
     onFiles(files) {
       handleFiles(files);
     },
@@ -454,7 +341,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     const transferId = params.get('transfer');
     if (!transferId) return;
 
-    dropHint.style.display = '';
     setDropStatus('正在加载转换结果，将自动载入原始 PDF 和图片版 PDF');
 
     try {
@@ -472,7 +358,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
       await deleteTransfer(transferId);
     } catch (err) {
       console.error(err);
-      dropHint.style.display = '';
       setDropStatus(`加载转换结果失败：${err && err.message ? err.message : err}`);
     }
   }
@@ -482,17 +367,16 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     items = [];
     grid.innerHTML = '';
     grid.style.display = 'none';
-    dropHint.style.display = '';
     if (fileDropZone) fileDropZone.clear();
   }
 
   async function handleFiles(files) {
     files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-    dropHint.style.display = 'none';
     grid.style.display = '';
     for (const f of files) {
       await addPdf(f);
     }
+    if (fileDropZone) fileDropZone.setHasItems(items.length > 0);
   }
 
   async function addPdf(file) {
@@ -626,7 +510,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     try { item.pdf && item.pdf.destroy && item.pdf.destroy(); } catch (_) {}
     if (items.length === 0) {
       grid.style.display = 'none';
-      dropHint.style.display = '';
       if (fileDropZone) fileDropZone.clear();
     }
   }

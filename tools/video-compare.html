@@ -3,18 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>视频对比</title>
-    <script>
-      (function () {
-        var pref = null;
-        try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
-        if (pref !== 'light' && pref !== 'dark') pref = 'auto';
-        var actual = pref === 'auto'
-          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-          : pref;
-        document.documentElement.setAttribute('data-theme', actual);
-        document.documentElement.setAttribute('data-theme-pref', pref);
-      })();
-    </script>
+    <script src="../assets/tool-header.js"></script>
     <style>
       :root[data-theme="dark"] {
         color-scheme: dark;
@@ -74,36 +63,9 @@
         outline-offset: -8px;
         background: var(--bg-drop);
       }
-      header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-shrink: 0;
-      }
-      h1 {
-        font-size: 16px;
-        margin: 0;
-        font-weight: 500;
-      }
       .hint {
         color: var(--text-muted);
         font-size: 12px;
-      }
-      .controls {
-        margin-left: auto;
-        display: flex;
-        gap: 8px;
-      }
-      .back-link {
-        color: var(--text-muted);
-        text-decoration: none;
-        font-size: 13px;
-        padding: 4px 8px;
-        border-radius: 4px;
-      }
-      .back-link:hover {
-        color: var(--text);
-        background: var(--surface-hover);
       }
       button {
         background: var(--surface-hover);
@@ -120,11 +82,6 @@
       button.danger {
         border-color: var(--danger-border);
         color: var(--danger);
-      }
-      #theme-toggle {
-        padding: 3px 8px;
-        font-size: 13px;
-        line-height: 1;
       }
       .grid {
         display: grid;
@@ -222,18 +179,13 @@
     <link rel="stylesheet" href="../assets/common.css">
   </head>
   <body class="tool-page">
-    <header>
-      <a href="../index.html" class="back-link" aria-label="主页" title="主页"></a>
-      <h1>视频对比</h1>
-      <div class="controls">
-        <button id="sync-toggle">同时播放</button>
-        <button id="sync-reset">回到 0s</button>
-        <button id="add-btn" type="button">添加视频</button>
-        <button id="clear" class="danger">清空</button>
-        <button id="theme-toggle" type="button" title="切换主题">🌙</button>
-        <input type="file" id="file-input" class="visually-hidden-file" accept="video/*,.mp4,.mov,.webm,.mkv,.m4v" multiple aria-label="选择视频文件">
-      </div>
-    </header>
+    <div id="header-controls" hidden>
+      <button id="sync-toggle">同时播放</button>
+      <button id="sync-reset">回到 0s</button>
+      <button id="add-btn" type="button">添加视频</button>
+      <button id="clear" class="danger">清空</button>
+      <input type="file" id="file-input" class="visually-hidden-file" accept="video/*,.mp4,.mov,.webm,.mkv,.m4v" multiple aria-label="选择视频文件">
+    </div>
 
     <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="video-drop-title">
       <div class="file-drop-icon" aria-hidden="true">
@@ -244,7 +196,7 @@
         </svg>
       </div>
       <div>
-        <div id="video-drop-title" class="file-drop-title">拖入、粘贴或点击添加视频</div>
+        <div id="video-drop-title" class="file-drop-title"></div>
       </div>
       <div id="video-drop-status" class="file-drop-status" hidden></div>
     </div>
@@ -253,46 +205,13 @@
 
     <script src="../assets/file-input.js"></script>
     <script>
-      (function setupThemeToggle() {
-        const btn = document.getElementById("theme-toggle");
-        if (!btn) return;
-        const mql = window.matchMedia("(prefers-color-scheme: dark)");
-        const ICONS = {
-          auto: { icon: "🖥️", title: "跟随系统（点击切到亮色）" },
-          light: { icon: "☀️", title: "亮色（点击切到暗色）" },
-          dark: { icon: "🌙", title: "暗色（点击切到跟随系统）" },
-        };
-        function getPref() {
-          let p = null;
-          try { p = localStorage.getItem("f-tools-theme"); } catch (e) {}
-          return p === "light" || p === "dark" ? p : "auto";
-        }
-        function setPref(p) {
-          try {
-            if (p === "auto") localStorage.removeItem("f-tools-theme");
-            else localStorage.setItem("f-tools-theme", p);
-          } catch (e) {}
-          apply(p);
-        }
-        function apply(pref) {
-          const actual = pref === "auto" ? (mql.matches ? "dark" : "light") : pref;
-          document.documentElement.setAttribute("data-theme", actual);
-          document.documentElement.setAttribute("data-theme-pref", pref);
-          btn.textContent = ICONS[pref].icon;
-          btn.title = ICONS[pref].title;
-        }
-        btn.addEventListener("click", () => {
-          const cur = getPref();
-          setPref(cur === "auto" ? "light" : cur === "light" ? "dark" : "auto");
+      (() => {
+        const headerControlsHost = document.getElementById("header-controls");
+        ToolHeader.mount({
+          title: "视频对比",
+          controls: Array.from(headerControlsHost.children),
         });
-        mql.addEventListener("change", () => {
-          if (getPref() === "auto") apply("auto");
-        });
-        window.addEventListener("storage", (e) => {
-          if (e.key !== "f-tools-theme") return;
-          apply(getPref());
-        });
-        apply(getPref());
+        headerControlsHost.remove();
       })();
 
       const grid = document.getElementById("grid");
@@ -307,12 +226,11 @@
         grid.innerHTML = "";
         if (items.length === 0) {
           if (fileDropZone) fileDropZone.clear();
-          dropHint.style.display = "";
           grid.style.display = "none";
           grid.style.gridTemplateColumns = "1fr";
           return;
         }
-        dropHint.style.display = "none";
+        if (fileDropZone) fileDropZone.setHasItems(true);
         grid.style.display = "";
         grid.style.gridTemplateColumns = `repeat(${items.length}, minmax(0, 1fr))`;
         items.forEach((item, idx) => {
@@ -430,13 +348,13 @@
         render();
       }
 
-      addBtn.addEventListener("click", () => fileInput.click());
       fileDropZone = FileInputDropZone.bind({
         zone: dropHint,
         input: fileInput,
         triggerElement: dropHint,
+        triggerButton: addBtn,
         status: dropStatus,
-        rejectedText: "没有可用的视频，请使用视频文件。",
+        subject: "视频",
         onFiles(files) {
           addFiles(files);
         },

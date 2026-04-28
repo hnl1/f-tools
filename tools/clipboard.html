@@ -5,18 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>剪切板链接管理器</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔗</text></svg>">
-    <script>
-        (function () {
-            var pref = null;
-            try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
-            if (pref !== 'light' && pref !== 'dark') pref = 'auto';
-            var actual = pref === 'auto'
-                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                : pref;
-            document.documentElement.setAttribute('data-theme', actual);
-            document.documentElement.setAttribute('data-theme-pref', pref);
-        })();
-    </script>
+    <script src="../assets/tool-header.js"></script>
     <style>
         :root {
             --primary-500: #3b82f6;
@@ -106,30 +95,6 @@
             transition: all 0.2s ease;
         }
 
-        .theme-toggle {
-            position: absolute;
-            top: 0;
-            right: 0;
-            background: transparent;
-            border: 1px solid var(--gray-200);
-            color: var(--gray-700);
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .theme-toggle:hover {
-            border-color: var(--primary-500);
-            color: var(--primary-600);
-        }
-
         .main-card:hover {
             box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
@@ -137,35 +102,6 @@
         .header {
             text-align: center;
             margin-bottom: var(--space-8);
-            position: relative;
-        }
-
-        .back-link {
-            position: absolute;
-            top: 0;
-            left: 0;
-            color: var(--gray-500);
-            text-decoration: none;
-            font-size: var(--text-sm);
-            padding: 4px 8px;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .back-link:hover {
-            color: var(--primary-600);
-            background: var(--gray-100);
-        }
-
-        .header h1 {
-            font-size: var(--text-3xl);
-            font-weight: 700;
-            color: var(--gray-900);
-            margin-bottom: var(--space-2);
-            background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
 
         .header p {
@@ -524,10 +460,6 @@
                 padding: var(--space-4) var(--space-6);
                 font-size: var(--text-base);
             }
-
-            .header h1 {
-                font-size: var(--text-2xl);
-            }
         }
 
         /* 无障碍设计 */
@@ -566,9 +498,6 @@
         <div id="messageContainer" class="message-container"></div>
         <div class="main-card">
             <header class="header">
-                <a href="../index.html" class="back-link" aria-label="主页" title="主页"></a>
-                <button id="theme-toggle" class="theme-toggle" type="button" title="切换主题">🌙</button>
-                <h1>剪切板链接管理器</h1>
                 <p>轻松管理您的链接，支持富文本和纯文本格式</p>
             </header>
 
@@ -1050,50 +979,9 @@
             }
         }
 
-        // 初始化应用
         document.addEventListener('DOMContentLoaded', () => {
+            ToolHeader.mount({ title: '剪切板链接管理器' });
             new ClipboardLinkManager();
-
-            const themeBtn = document.getElementById('theme-toggle');
-            if (themeBtn) {
-                const mql = window.matchMedia('(prefers-color-scheme: dark)');
-                const ICONS = {
-                    auto: { icon: '🖥️', title: '跟随系统（点击切到亮色）' },
-                    light: { icon: '☀️', title: '亮色（点击切到暗色）' },
-                    dark: { icon: '🌙', title: '暗色（点击切到跟随系统）' }
-                };
-                const getPref = () => {
-                    let p = null;
-                    try { p = localStorage.getItem('f-tools-theme'); } catch (e) {}
-                    return p === 'light' || p === 'dark' ? p : 'auto';
-                };
-                const apply = (pref) => {
-                    const actual = pref === 'auto' ? (mql.matches ? 'dark' : 'light') : pref;
-                    document.documentElement.setAttribute('data-theme', actual);
-                    document.documentElement.setAttribute('data-theme-pref', pref);
-                    themeBtn.textContent = ICONS[pref].icon;
-                    themeBtn.title = ICONS[pref].title;
-                };
-                const setPref = (p) => {
-                    try {
-                        if (p === 'auto') localStorage.removeItem('f-tools-theme');
-                        else localStorage.setItem('f-tools-theme', p);
-                    } catch (e) {}
-                    apply(p);
-                };
-                themeBtn.addEventListener('click', () => {
-                    const cur = getPref();
-                    setPref(cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto');
-                });
-                mql.addEventListener('change', () => {
-                    if (getPref() === 'auto') apply('auto');
-                });
-                window.addEventListener('storage', (e) => {
-                    if (e.key !== 'f-tools-theme') return;
-                    apply(getPref());
-                });
-                apply(getPref());
-            }
         });
     </script>
 </body>
