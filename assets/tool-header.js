@@ -141,5 +141,5 @@
     return { headerEl: header, controlsEl: actions, themeBtn, clearBtn };
   }
 
-  global.ToolHeader = { mount };
+  global.ToolHeader = { mount, createThemeToggle };
 })(window);

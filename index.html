@@ -5,18 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>f-tools · 前端小工具集</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧰</text></svg>">
-    <script>
-        (function () {
-            var pref = null;
-            try { pref = localStorage.getItem('f-tools-theme'); } catch (e) {}
-            if (pref !== 'light' && pref !== 'dark') pref = 'auto';
-            var actual = pref === 'auto'
-                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-                : pref;
-            document.documentElement.setAttribute('data-theme', actual);
-            document.documentElement.setAttribute('data-theme-pref', pref);
-        })();
-    </script>
+    <script src="assets/tool-header.js"></script>
     <style>
         :root[data-theme="light"] {
             color-scheme: light;
@@ -72,29 +61,10 @@
             position: relative;
         }
 
-        .theme-toggle {
+        .theme-toggle-host {
             position: absolute;
-            top: 24px;
-            right: 24px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 18px;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            box-shadow: var(--shadow);
-        }
-
-        .theme-toggle:hover {
-            border-color: var(--primary-500);
-            transform: translateY(-1px);
+            top: 20px;
+            right: 20px;
         }
 
         .header {
@@ -197,9 +167,9 @@
             .header h1 {
                 font-size: 1.75rem;
             }
-            .theme-toggle {
-                top: 12px;
-                right: 12px;
+            .theme-toggle-host {
+                top: 10px;
+                right: 10px;
             }
         }
     </style>
@@ -207,7 +177,7 @@
 </head>
 <body class="home-page">
     <div class="container">
-        <button class="theme-toggle" id="theme-toggle" type="button" title="切换主题">🌙</button>
+        <div class="theme-toggle-host" id="theme-toggle-host"></div>
         <header class="header">
             <h1>f-tools</h1>
             <p>一些自用的纯前端小工具</p>
@@ -256,47 +226,7 @@
     </div>
 
     <script>
-        (function () {
-            var btn = document.getElementById('theme-toggle');
-            if (!btn) return;
-            var mql = window.matchMedia('(prefers-color-scheme: dark)');
-            var ICONS = {
-                auto: { icon: '🖥️', title: '跟随系统（点击切到亮色）' },
-                light: { icon: '☀️', title: '亮色（点击切到暗色）' },
-                dark: { icon: '🌙', title: '暗色（点击切到跟随系统）' }
-            };
-            function getPref() {
-                var p = null;
-                try { p = localStorage.getItem('f-tools-theme'); } catch (e) {}
-                return p === 'light' || p === 'dark' ? p : 'auto';
-            }
-            function apply(pref) {
-                var actual = pref === 'auto' ? (mql.matches ? 'dark' : 'light') : pref;
-                document.documentElement.setAttribute('data-theme', actual);
-                document.documentElement.setAttribute('data-theme-pref', pref);
-                btn.textContent = ICONS[pref].icon;
-                btn.title = ICONS[pref].title;
-            }
-            function setPref(p) {
-                try {
-                    if (p === 'auto') localStorage.removeItem('f-tools-theme');
-                    else localStorage.setItem('f-tools-theme', p);
-                } catch (e) {}
-                apply(p);
-            }
-            btn.addEventListener('click', function () {
-                var cur = getPref();
-                setPref(cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto');
-            });
-            mql.addEventListener('change', function () {
-                if (getPref() === 'auto') apply('auto');
-            });
-            window.addEventListener('storage', function (e) {
-                if (e.key !== 'f-tools-theme') return;
-                apply(getPref());
-            });
-            apply(getPref());
-        })();
+        document.getElementById('theme-toggle-host').appendChild(ToolHeader.createThemeToggle());
     </script>
 </body>
 </html>
