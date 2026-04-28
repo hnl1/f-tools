@@ -228,7 +228,6 @@
     <input type="range" id="region-frac" min="5" max="50" step="5" value="25">
     <span id="region-frac-value">25%</span>
   </label>
-  <button id="clear-btn">清空</button>
   <button id="add-btn" type="button">添加图片</button>
   <input type="file" id="file-input" class="visually-hidden-file" accept="image/*" multiple aria-label="选择图片文件">
 </div>
@@ -256,9 +255,10 @@
 <script>
 (() => {
   const headerControlsHost = document.getElementById('header-controls');
-  ToolHeader.mount({
+  const { clearBtn } = ToolHeader.mount({
     title: '图片对比',
     controls: Array.from(headerControlsHost.children),
+    clearButton: { onClear: () => clearAll() },
   });
   headerControlsHost.remove();
 
@@ -268,7 +268,6 @@
   const regionFracInput = document.getElementById('region-frac');
   const regionFracValueLabel = document.getElementById('region-frac-value');
   const zoomResizer = document.getElementById('zoom-resizer');
-  const clearBtn = document.getElementById('clear-btn');
   const addBtn = document.getElementById('add-btn');
   const fileInput = document.getElementById('file-input');
   const dropStatus = document.getElementById('image-drop-status');
@@ -314,7 +313,10 @@
     window.addEventListener('mouseup', onUp);
   });
 
-  clearBtn.addEventListener('click', () => clearAll());
+  function updateClearBtn() {
+    clearBtn.setCount(items.length);
+  }
+  updateClearBtn();
   fileDropZone = FileInputDropZone.bind({
     zone: dropHint,
     input: fileInput,
@@ -337,6 +339,7 @@
     zoomResizer.classList.remove('active');
     document.body.classList.remove('has-zoom');
     if (fileDropZone) fileDropZone.clear();
+    updateClearBtn();
   }
 
   async function handleFiles(files) {
@@ -348,6 +351,7 @@
     layoutGrid();
     buildZoomPanels();
     if (fileDropZone) fileDropZone.setHasItems(items.length > 0);
+    updateClearBtn();
   }
 
   function addImage(name, blob) {
@@ -411,6 +415,7 @@
     item.tile.remove();
     layoutGrid();
     buildZoomPanels();
+    updateClearBtn();
     if (items.length === 0) {
       grid.style.display = 'none';
       if (fileDropZone) fileDropZone.clear();

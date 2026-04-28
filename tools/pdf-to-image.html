@@ -267,9 +267,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
 (() => {
   const headerControlsHost = document.getElementById('header-controls');
-  ToolHeader.mount({
+  const { clearBtn } = ToolHeader.mount({
     title: 'PDF 转图片版',
     controls: Array.from(headerControlsHost.children),
+    clearButton: { onClear: () => clearAll() },
   });
   headerControlsHost.remove();
 
@@ -314,6 +315,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     generateAllBtn.disabled = !hasItems || isGenerating;
     downloadAllBtn.disabled = !hasGenerated || isGenerating;
     pdfList.hidden = !hasItems;
+    clearBtn.setEnabled(hasItems && !isGenerating);
+  }
+
+  function clearAll() {
+    if (isGenerating || !items.length) return;
+    items.forEach((item) => item.elements.row.remove());
+    items = [];
+    log('已清空全部 PDF。');
+    updateGlobalControls();
   }
 
   function setItemStatus(item, status, message, isError = false) {

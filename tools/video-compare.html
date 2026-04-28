@@ -183,7 +183,6 @@
       <button id="sync-toggle">同时播放</button>
       <button id="sync-reset">回到 0s</button>
       <button id="add-btn" type="button">添加视频</button>
-      <button id="clear" class="danger">清空</button>
       <input type="file" id="file-input" class="visually-hidden-file" accept="video/*,.mp4,.mov,.webm,.mkv,.m4v" multiple aria-label="选择视频文件">
     </div>
 
@@ -205,14 +204,13 @@
 
     <script src="../assets/file-input.js"></script>
     <script>
-      (() => {
-        const headerControlsHost = document.getElementById("header-controls");
-        ToolHeader.mount({
-          title: "视频对比",
-          controls: Array.from(headerControlsHost.children),
-        });
-        headerControlsHost.remove();
-      })();
+      const headerControlsHost = document.getElementById("header-controls");
+      const { clearBtn } = ToolHeader.mount({
+        title: "视频对比",
+        controls: Array.from(headerControlsHost.children),
+        clearButton: { onClear: () => clearAll() },
+      });
+      headerControlsHost.remove();
 
       const grid = document.getElementById("grid");
       const dropHint = document.getElementById("drop-hint");
@@ -222,8 +220,15 @@
       const items = [];
       let fileDropZone = null;
 
+      function clearAll() {
+        items.forEach((it) => URL.revokeObjectURL(it.url));
+        items.length = 0;
+        render();
+      }
+
       function render() {
         grid.innerHTML = "";
+        clearBtn.setCount(items.length);
         if (items.length === 0) {
           if (fileDropZone) fileDropZone.clear();
           grid.style.display = "none";
@@ -387,12 +392,6 @@
         });
         refreshToggleLabel();
       });
-      document.getElementById("clear").addEventListener("click", () => {
-        items.forEach((it) => URL.revokeObjectURL(it.url));
-        items.length = 0;
-        render();
-      });
-
       render();
     </script>
   </body>

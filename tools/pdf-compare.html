@@ -211,7 +211,6 @@
       <option value="3">3x</option>
     </select>
   </label>
-  <button id="clear-btn">清空</button>
   <button id="add-btn" type="button">添加 PDF</button>
   <input type="file" id="file-input" class="visually-hidden-file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
 </div>
@@ -239,15 +238,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
 (() => {
   const headerControlsHost = document.getElementById('header-controls');
-  ToolHeader.mount({
+  const { clearBtn } = ToolHeader.mount({
     title: 'PDF 对比',
     controls: Array.from(headerControlsHost.children),
+    clearButton: { onClear: () => clearAll() },
   });
   headerControlsHost.remove();
 
   const grid = document.getElementById('grid');
   const dropHint = document.getElementById('drop-hint');
-  const clearBtn = document.getElementById('clear-btn');
   const addBtn = document.getElementById('add-btn');
   const fileInput = document.getElementById('file-input');
   const dropStatus = document.getElementById('pdf-drop-status');
@@ -268,7 +267,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     for (const it of items) await rerenderColumn(it);
   });
 
-  clearBtn.addEventListener('click', clearAll);
+  function updateClearBtn() {
+    clearBtn.setCount(items.length);
+  }
+  updateClearBtn();
   fileDropZone = FileInputDropZone.bind({
     zone: dropHint,
     input: fileInput,
@@ -368,6 +370,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     grid.innerHTML = '';
     grid.style.display = 'none';
     if (fileDropZone) fileDropZone.clear();
+    updateClearBtn();
   }
 
   async function handleFiles(files) {
@@ -377,6 +380,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
       await addPdf(f);
     }
     if (fileDropZone) fileDropZone.setHasItems(items.length > 0);
+    updateClearBtn();
   }
 
   async function addPdf(file) {
@@ -508,6 +512,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     items = items.filter(i => i !== item);
     item.col.remove();
     try { item.pdf && item.pdf.destroy && item.pdf.destroy(); } catch (_) {}
+    updateClearBtn();
     if (items.length === 0) {
       grid.style.display = 'none';
       if (fileDropZone) fileDropZone.clear();

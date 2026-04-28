@@ -164,6 +164,13 @@ body.tool-page .button {
     color var(--ft-transition), transform var(--ft-transition);
 }
 
+body.tool-page .tool-header button,
+body.tool-page .tool-header .button {
+  padding: 4px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 body.tool-page button:hover,
 body.tool-page .button:hover {
   background: var(--button-hover);
@@ -185,9 +192,22 @@ body.tool-page button.danger {
   color: var(--danger, #dc2626);
 }
 
-body.tool-page button.danger:hover {
+body.tool-page button.danger:hover:not(:disabled) {
   border-color: var(--danger-border, var(--accent));
   background: var(--danger-hover-bg, var(--button-hover));
+}
+
+body.tool-page button:disabled,
+body.tool-page .button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+body.tool-page button:disabled:hover,
+body.tool-page .button:disabled:hover {
+  background: var(--button-bg);
+  border-color: var(--button-border);
 }
 
 body.tool-page input[type="file"],

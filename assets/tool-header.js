@@ -76,6 +76,27 @@
     return btn;
   }
 
+  function createClearButton(options) {
+    const onClear = typeof options.onClear === 'function' ? options.onClear : () => {};
+    const label = options.label || '清空';
+    const btn = document.createElement('button');
+    btn.id = 'clear-btn';
+    btn.type = 'button';
+    btn.className = 'danger';
+    btn.textContent = label;
+    btn.disabled = true;
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      onClear();
+    });
+
+    return {
+      el: btn,
+      setEnabled(enabled) { btn.disabled = !enabled; },
+      setCount(n) { btn.disabled = !(typeof n === 'number' && n > 0); },
+    };
+  }
+
   function mount(options) {
     options = options || {};
     const title = options.title || '';
@@ -100,6 +121,12 @@
     actions.className = 'header-actions';
     controls.forEach((el) => { if (el) actions.appendChild(el); });
 
+    let clearBtn = null;
+    if (options.clearButton) {
+      clearBtn = createClearButton(options.clearButton);
+      actions.appendChild(clearBtn.el);
+    }
+
     let themeBtn = null;
     if (includeTheme) {
       themeBtn = createThemeToggle();
@@ -109,7 +136,7 @@
 
     document.body.insertBefore(header, document.body.firstChild);
 
-    return { headerEl: header, controlsEl: actions, themeBtn };
+    return { headerEl: header, controlsEl: actions, themeBtn, clearBtn };
   }
 
   global.ToolHeader = { mount };
