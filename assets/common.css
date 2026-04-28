@@ -173,8 +173,8 @@ body.tool-page {
   --icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z'/%3E%3C/svg%3E");
 }
 
-body.tool-page button,
-body.tool-page .button {
+body.tool-page button:not(.icon-btn),
+body.tool-page .button:not(.icon-btn) {
   background: var(--button-bg);
   color: var(--text);
   border: 1px solid var(--button-border);
@@ -184,8 +184,8 @@ body.tool-page .button {
     color var(--ft-transition), transform var(--ft-transition);
 }
 
-.tool-header button,
-.tool-header .button {
+.tool-header button:not(.icon-btn),
+.tool-header .button:not(.icon-btn) {
   padding: 4px 12px;
   font-size: 13px;
   line-height: 1.5;

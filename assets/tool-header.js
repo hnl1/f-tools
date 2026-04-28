@@ -1,103 +1,4 @@
 (function (global) {
-  const STORAGE_KEY = 'f-tools-theme';
-  const TITLES = {
-    auto: '跟随系统（点击切到亮色）',
-    light: '亮色（点击切到暗色）',
-    dark: '暗色（点击切到跟随系统）',
-  };
-
-  function getPref() {
-    let p = null;
-    try { p = localStorage.getItem(STORAGE_KEY); } catch (e) {}
-    return p === 'light' || p === 'dark' ? p : 'auto';
-  }
-
-  function applyThemeAttrs(pref) {
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const actual = pref === 'auto' ? (mql.matches ? 'dark' : 'light') : pref;
-    document.documentElement.setAttribute('data-theme', actual);
-    document.documentElement.setAttribute('data-theme-pref', pref);
-    return actual;
-  }
-
-  function setPref(pref) {
-    try {
-      if (pref === 'auto') localStorage.removeItem(STORAGE_KEY);
-      else localStorage.setItem(STORAGE_KEY, pref);
-    } catch (e) {}
-    applyThemeAttrs(pref);
-  }
-
-  applyThemeAttrs(getPref());
-
-  function createBackLink(href, label) {
-    const a = document.createElement('a');
-    a.className = 'back-link icon-btn';
-    a.href = href;
-    a.setAttribute('aria-label', label);
-    a.title = label;
-    return a;
-  }
-
-  function createThemeToggle() {
-    const btn = document.createElement('button');
-    btn.id = 'theme-toggle';
-    btn.className = 'icon-btn';
-    btn.type = 'button';
-    btn.setAttribute('aria-label', '切换主题');
-
-    function refresh() {
-      const pref = getPref();
-      btn.dataset.pref = pref;
-      btn.title = TITLES[pref];
-    }
-
-    refresh();
-
-    btn.addEventListener('click', () => {
-      const cur = getPref();
-      setPref(cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto');
-      refresh();
-    });
-
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    mql.addEventListener('change', () => {
-      if (getPref() === 'auto') {
-        applyThemeAttrs('auto');
-        refresh();
-      }
-    });
-
-    window.addEventListener('storage', (e) => {
-      if (e.key !== STORAGE_KEY) return;
-      applyThemeAttrs(getPref());
-      refresh();
-    });
-
-    return btn;
-  }
-
-  function createClearButton(options) {
-    const onClear = typeof options.onClear === 'function' ? options.onClear : () => {};
-    const label = options.label || '清空';
-    const btn = document.createElement('button');
-    btn.id = 'clear-btn';
-    btn.type = 'button';
-    btn.className = 'danger';
-    btn.textContent = label;
-    btn.disabled = true;
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      onClear();
-    });
-
-    return {
-      el: btn,
-      setEnabled(enabled) { btn.disabled = !enabled; },
-      setCount(n) { btn.disabled = !(typeof n === 'number' && n > 0); },
-    };
-  }
-
   function mount(options) {
     options = options || {};
     const title = options.title || '';
@@ -112,11 +13,11 @@
     const header = document.createElement('header');
     header.className = 'tool-header';
 
-    header.appendChild(createBackLink(back, '主页'));
+    header.appendChild(HomeLink.create(back, '主页'));
 
     let themeBtn = null;
     if (includeTheme) {
-      themeBtn = createThemeToggle();
+      themeBtn = ThemeToggle.create();
       header.appendChild(themeBtn);
     }
 
@@ -130,7 +31,7 @@
 
     let clearBtn = null;
     if (options.clearButton) {
-      clearBtn = createClearButton(options.clearButton);
+      clearBtn = ClearButton.create(options.clearButton);
       actions.appendChild(clearBtn.el);
     }
 
@@ -141,5 +42,5 @@
     return { headerEl: header, controlsEl: actions, themeBtn, clearBtn };
   }
 
-  global.ToolHeader = { mount, createThemeToggle };
+  global.ToolHeader = { mount };
 })(window);

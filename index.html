@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>f-tools · 前端小工具集</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧰</text></svg>">
-    <script src="assets/tool-header.js"></script>
+    <script src="assets/theme-toggle.js"></script>
     <style>
         :root[data-theme="light"] {
             color-scheme: light;
@@ -226,7 +226,7 @@
     </div>
 
     <script>
-        document.getElementById('theme-toggle-host').appendChild(ToolHeader.createThemeToggle());
+        document.getElementById('theme-toggle-host').appendChild(ThemeToggle.create());
     </script>
 </body>
 </html>
