@@ -117,7 +117,7 @@ test("tool pages keep their key controls", () => {
 test("tool pages link back to the home page", () => {
   for (const page of toolPages) {
     const html = read(page);
-    assert.match(html, /<a href="\.\.\/index\.html" class="back-link">\s*主页\s*<\/a>/, `${page} should label the top-left link as home`);
+    assert.match(html, /<a href="\.\.\/index\.html" class="back-link" aria-label="主页" title="主页">\s*<\/a>/, `${page} should expose the top-left home link as an icon`);
     assert.doesNotMatch(html, /← 返回/, `${page} should not label the home link as back`);
   }
 });
