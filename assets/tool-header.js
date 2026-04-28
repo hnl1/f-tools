@@ -1,9 +1,9 @@
 (function (global) {
   const STORAGE_KEY = 'f-tools-theme';
-  const ICONS = {
-    auto: { icon: '🖥️', title: '跟随系统（点击切到亮色）' },
-    light: { icon: '☀️', title: '亮色（点击切到暗色）' },
-    dark: { icon: '🌙', title: '暗色（点击切到跟随系统）' },
+  const TITLES = {
+    auto: '跟随系统（点击切到亮色）',
+    light: '亮色（点击切到暗色）',
+    dark: '暗色（点击切到跟随系统）',
   };
 
   function getPref() {
@@ -32,7 +32,7 @@
 
   function createBackLink(href, label) {
     const a = document.createElement('a');
-    a.className = 'back-link';
+    a.className = 'back-link icon-btn';
     a.href = href;
     a.setAttribute('aria-label', label);
     a.title = label;
@@ -42,13 +42,14 @@
   function createThemeToggle() {
     const btn = document.createElement('button');
     btn.id = 'theme-toggle';
+    btn.className = 'icon-btn';
     btn.type = 'button';
-    btn.title = '切换主题';
+    btn.setAttribute('aria-label', '切换主题');
 
     function refresh() {
       const pref = getPref();
-      btn.textContent = ICONS[pref].icon;
-      btn.title = ICONS[pref].title;
+      btn.dataset.pref = pref;
+      btn.title = TITLES[pref];
     }
 
     refresh();
@@ -113,6 +114,12 @@
 
     header.appendChild(createBackLink(back, '主页'));
 
+    let themeBtn = null;
+    if (includeTheme) {
+      themeBtn = createThemeToggle();
+      header.appendChild(themeBtn);
+    }
+
     const h1 = document.createElement('h1');
     h1.textContent = title;
     header.appendChild(h1);
@@ -127,11 +134,6 @@
       actions.appendChild(clearBtn.el);
     }
 
-    let themeBtn = null;
-    if (includeTheme) {
-      themeBtn = createThemeToggle();
-      actions.appendChild(themeBtn);
-    }
     if (actions.childNodes.length) header.appendChild(actions);
 
     document.body.insertBefore(header, document.body.firstChild);
