@@ -258,7 +258,11 @@ test("shared file drop zone style exists", () => {
   assert.match(css, /\.file-drop-zone\.dragging\s*\{/);
   assert.match(css, /\.file-drop-icon\s*\{/);
   assert.doesNotMatch(css, /\.file-drop-zone \.file-choose-button\s*\{/);
+  assert.match(css, /\.file-drop-actions\s*\{/);
+  assert.doesNotMatch(css, /\.file-drop-action\.primary\s*\{/);
   assert.match(css, /\.file-drop-status\s*\{/);
+  assert.match(css, /\.file-input-picker-menu\s*\{/);
+  assert.match(css, /\.file-input-picker-menu\[hidden\]\s*\{/);
 });
 
 test("shared file input script supports drop zone triggers", () => {
@@ -269,4 +273,15 @@ test("shared file input script supports drop zone triggers", () => {
   assert.match(script, /setAttribute\('role', 'button'\)/);
   assert.match(script, /addEventListener\('keydown'/);
   assert.doesNotMatch(script, /const button = toElement\(options\.button\)/);
+});
+
+test("shared file input script supports directory picking", () => {
+  const script = read("assets/file-input.js");
+
+  assert.match(script, /webkitdirectory/);
+  assert.match(script, /createDirectoryInput/);
+  assert.match(script, /createDropActions/);
+  assert.match(script, /acceptFiles\(directoryInput\.files, 'folder'\)/);
+  assert.match(script, /textContent = '选择文件夹'/);
+  assert.match(script, /textContent = '添加文件夹'/);
 });

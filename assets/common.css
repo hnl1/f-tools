@@ -341,6 +341,23 @@ body.tool-page .file-drop-zone.has-error .file-drop-title {
   color: var(--danger, #dc2626);
 }
 
+body.tool-page .file-drop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+body.tool-page .file-drop-action {
+  min-width: 96px;
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 14px;
+  border-color: var(--button-border);
+  background: transparent;
+}
+
 body.tool-page .file-drop-status {
   max-width: 100%;
   word-break: break-all;
@@ -418,6 +435,30 @@ body.tool-page .file-drop-zone.is-collapsed {
 .file-input-trigger-tooltip.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.file-input-picker-menu {
+  position: fixed;
+  z-index: 40;
+  display: grid;
+  gap: 4px;
+  min-width: 132px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--ft-radius-sm);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+.file-input-picker-menu[hidden] {
+  display: none;
+}
+
+.file-input-picker-menu button {
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  white-space: nowrap;
 }
 
 body.tool-page .cell,

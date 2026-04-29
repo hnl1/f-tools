@@ -88,6 +88,26 @@
     return `已选择 ${files.length} 个文件`;
   }
 
+  function supportsDirectoryInput() {
+    const probe = document.createElement('input');
+    probe.type = 'file';
+    return 'webkitdirectory' in probe;
+  }
+
+  function createDirectoryInput(input) {
+    const directoryInput = document.createElement('input');
+    directoryInput.type = 'file';
+    directoryInput.className = input.className;
+    directoryInput.accept = input.accept || '';
+    directoryInput.multiple = true;
+    directoryInput.tabIndex = -1;
+    directoryInput.setAttribute('aria-hidden', 'true');
+    directoryInput.setAttribute('webkitdirectory', '');
+    directoryInput.setAttribute('directory', '');
+    input.insertAdjacentElement('afterend', directoryInput);
+    return directoryInput;
+  }
+
   function spaceBeforeSubject(subject) {
     return /^[A-Za-z0-9]/.test(subject) ? ' ' : '';
   }
@@ -95,7 +115,17 @@
   function formatDropTitle(subject) {
     if (!subject) return '';
     const sp = spaceBeforeSubject(subject);
-    return `拖入${sp}${subject}/文件夹、粘贴或点击添加${sp}${subject}`;
+    return `拖入${sp}${subject}/文件夹，粘贴或选择资源`;
+  }
+
+  function formatChooseFileText(subject) {
+    if (!subject) return '选择文件';
+    return `选择${spaceBeforeSubject(subject)}${subject}`;
+  }
+
+  function formatAddFileText(subject) {
+    if (!subject) return '添加文件';
+    return `添加${spaceBeforeSubject(subject)}${subject}`;
   }
 
   function formatRejectedText(subject) {
@@ -117,10 +147,13 @@
     const emptyText = options.emptyText || '';
     const acceptedText = options.acceptedText || summarizeFiles;
     const rejectedText = options.rejectedText || formatRejectedText(subject);
+    const allowDirectories = options.allowDirectories !== false && supportsDirectoryInput();
 
     if (!zone || !input || typeof onFiles !== 'function') {
       throw new Error('bindFileInputDropZone requires zone, input, and onFiles.');
     }
+
+    const directoryInput = allowDirectories ? createDirectoryInput(input) : null;
 
     if (subject) {
       const titleEl = zone.querySelector('.file-drop-title');
@@ -128,6 +161,7 @@
     }
     const sourceLabels = Object.assign({
       choose: '选择',
+      folder: '选择文件夹',
       drop: '拖入',
       paste: '粘贴',
     }, options.sourceLabels || {});
@@ -137,6 +171,7 @@
     let triggerIntroTimer = 0;
     let triggerTooltipTimer = 0;
     let triggerTooltipEl = null;
+    let pickerMenuEl = null;
 
     function ensureTriggerTooltip() {
       if (triggerTooltipEl || !triggerButton || !subject) return triggerTooltipEl;
@@ -260,10 +295,139 @@
       input.value = '';
     });
 
-    function openFilePicker(event) {
-      if (event) event.preventDefault();
+    if (directoryInput) {
+      directoryInput.addEventListener('change', () => {
+        acceptFiles(directoryInput.files, 'folder');
+        directoryInput.value = '';
+      });
+    }
+
+    function chooseFiles() {
+      hidePickerMenu();
       input.click();
     }
+
+    function chooseFolder() {
+      hidePickerMenu();
+      if (directoryInput) directoryInput.click();
+    }
+
+    function createDropActions() {
+      if (!directoryInput || zone.querySelector('.file-drop-actions')) return;
+
+      const actions = document.createElement('div');
+      actions.className = 'file-drop-actions';
+
+      const fileButton = document.createElement('button');
+      fileButton.type = 'button';
+      fileButton.className = 'file-drop-action';
+      fileButton.textContent = formatChooseFileText(subject);
+      fileButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        chooseFiles();
+      });
+
+      const folderButton = document.createElement('button');
+      folderButton.type = 'button';
+      folderButton.className = 'file-drop-action';
+      folderButton.textContent = '选择文件夹';
+      folderButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        chooseFolder();
+      });
+
+      actions.append(fileButton, folderButton);
+
+      if (status && status.parentElement === zone) {
+        zone.insertBefore(actions, status);
+      } else {
+        zone.appendChild(actions);
+      }
+    }
+
+    function ensurePickerMenu() {
+      if (pickerMenuEl || !directoryInput) return pickerMenuEl;
+
+      pickerMenuEl = document.createElement('div');
+      pickerMenuEl.className = 'file-input-picker-menu';
+      pickerMenuEl.setAttribute('role', 'menu');
+      pickerMenuEl.hidden = true;
+
+      const fileButton = document.createElement('button');
+      fileButton.type = 'button';
+      fileButton.setAttribute('role', 'menuitem');
+      fileButton.textContent = formatAddFileText(subject);
+      fileButton.addEventListener('click', chooseFiles);
+
+      const folderButton = document.createElement('button');
+      folderButton.type = 'button';
+      folderButton.setAttribute('role', 'menuitem');
+      folderButton.textContent = '添加文件夹';
+      folderButton.addEventListener('click', chooseFolder);
+
+      pickerMenuEl.append(fileButton, folderButton);
+      pickerMenuEl.addEventListener('click', (event) => event.stopPropagation());
+      pickerMenuEl.addEventListener('keydown', (event) => {
+        const buttons = Array.from(pickerMenuEl.querySelectorAll('button'));
+        const activeIndex = buttons.indexOf(document.activeElement);
+        if (event.key === 'Escape') {
+          hidePickerMenu();
+          return;
+        }
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowDown' ? 1 : -1;
+        const nextIndex = (activeIndex + direction + buttons.length) % buttons.length;
+        buttons[nextIndex].focus();
+      });
+      document.body.appendChild(pickerMenuEl);
+      return pickerMenuEl;
+    }
+
+    function positionPickerMenu(anchor) {
+      if (!pickerMenuEl || !anchor) return;
+      const rect = anchor.getBoundingClientRect();
+      const menuRect = pickerMenuEl.getBoundingClientRect();
+      const left = Math.min(
+        Math.max(8, rect.left + rect.width / 2 - menuRect.width / 2),
+        Math.max(8, window.innerWidth - menuRect.width - 8)
+      );
+      const top = Math.min(rect.bottom + 8, Math.max(8, window.innerHeight - menuRect.height - 8));
+      pickerMenuEl.style.left = `${left}px`;
+      pickerMenuEl.style.top = `${top}px`;
+    }
+
+    function hidePickerMenu() {
+      if (!pickerMenuEl) return;
+      pickerMenuEl.hidden = true;
+    }
+
+    function showPickerMenu(anchor) {
+      ensurePickerMenu();
+      if (!pickerMenuEl) return;
+      pickerMenuEl.hidden = false;
+      positionPickerMenu(anchor);
+      const firstButton = pickerMenuEl.querySelector('button');
+      if (firstButton) firstButton.focus();
+    }
+
+    function openFilePicker(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      hideTriggerTooltip();
+      if (directoryInput && event && event.currentTarget === triggerButton) {
+        showPickerMenu(triggerButton);
+        return;
+      }
+      chooseFiles();
+    }
+
+    createDropActions();
+    document.addEventListener('click', hidePickerMenu);
 
     if (triggerElement && triggerElement !== zone) {
       triggerElement.addEventListener('click', openFilePicker);
