@@ -182,9 +182,24 @@
     return `选择${spaceBeforeSubject(subject)}${subject}`;
   }
 
-  function formatAddFileText(subject) {
-    if (!subject) return '添加文件';
-    return `添加${spaceBeforeSubject(subject)}${subject}`;
+  function createSplitTrigger(triggerButton, onMenuClick) {
+    if (!triggerButton || triggerButton.closest('.file-input-split-trigger')) return null;
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'file-input-split-trigger';
+    triggerButton.insertAdjacentElement('beforebegin', wrapper);
+    wrapper.appendChild(triggerButton);
+
+    const menuButton = document.createElement('button');
+    menuButton.type = 'button';
+    menuButton.className = 'file-input-trigger-menu';
+    menuButton.setAttribute('aria-haspopup', 'menu');
+    menuButton.setAttribute('aria-expanded', 'false');
+    menuButton.setAttribute('aria-label', `${triggerButton.textContent.trim() || '添加文件'} 选项`);
+    menuButton.addEventListener('click', onMenuClick);
+    wrapper.appendChild(menuButton);
+
+    return menuButton;
   }
 
   function formatRejectedText(subject) {
@@ -229,6 +244,11 @@
     let triggerTooltipTimer = 0;
     let triggerTooltipEl = null;
     let pickerMenuEl = null;
+    let triggerMenuButton = null;
+
+    function getTriggerTooltipTarget() {
+      return triggerButton && (triggerButton.closest('.file-input-split-trigger') || triggerButton);
+    }
 
     function ensureTriggerTooltip() {
       if (triggerTooltipEl || !triggerButton || !subject) return triggerTooltipEl;
@@ -243,7 +263,7 @@
 
     function positionTriggerTooltip() {
       if (!triggerTooltipEl || !triggerButton) return;
-      const rect = triggerButton.getBoundingClientRect();
+      const rect = getTriggerTooltipTarget().getBoundingClientRect();
       triggerTooltipEl.style.left = `${rect.left + rect.width / 2}px`;
       triggerTooltipEl.style.top = `${rect.bottom + 8}px`;
     }
@@ -255,6 +275,11 @@
       positionTriggerTooltip();
       triggerTooltipEl.hidden = false;
       requestAnimationFrame(() => triggerTooltipEl.classList.add('is-visible'));
+    }
+
+    function scheduleTriggerTooltip() {
+      clearTimeout(triggerTooltipTimer);
+      triggerTooltipTimer = window.setTimeout(showTriggerTooltip, 250);
     }
 
     function hideTriggerTooltip() {
@@ -402,19 +427,13 @@
       pickerMenuEl.setAttribute('role', 'menu');
       pickerMenuEl.hidden = true;
 
-      const fileButton = document.createElement('button');
-      fileButton.type = 'button';
-      fileButton.setAttribute('role', 'menuitem');
-      fileButton.textContent = formatAddFileText(subject);
-      fileButton.addEventListener('click', chooseFiles);
-
       const folderButton = document.createElement('button');
       folderButton.type = 'button';
       folderButton.setAttribute('role', 'menuitem');
       folderButton.textContent = '添加文件夹';
       folderButton.addEventListener('click', chooseFolder);
 
-      pickerMenuEl.append(fileButton, folderButton);
+      pickerMenuEl.append(folderButton);
       pickerMenuEl.addEventListener('click', (event) => event.stopPropagation());
       pickerMenuEl.addEventListener('keydown', (event) => {
         const buttons = Array.from(pickerMenuEl.querySelectorAll('button'));
@@ -435,13 +454,15 @@
 
     function positionPickerMenu(anchor) {
       if (!pickerMenuEl || !anchor) return;
-      const rect = anchor.getBoundingClientRect();
+      const target = anchor.closest('.file-input-split-trigger') || anchor;
+      const rect = target.getBoundingClientRect();
+      pickerMenuEl.style.minWidth = `${Math.round(rect.width)}px`;
       const menuRect = pickerMenuEl.getBoundingClientRect();
       const left = Math.min(
-        Math.max(8, rect.left + rect.width / 2 - menuRect.width / 2),
+        Math.max(8, rect.left),
         Math.max(8, window.innerWidth - menuRect.width - 8)
       );
-      const top = Math.min(rect.bottom + 8, Math.max(8, window.innerHeight - menuRect.height - 8));
+      const top = Math.min(rect.bottom + 4, Math.max(8, window.innerHeight - menuRect.height - 8));
       pickerMenuEl.style.left = `${left}px`;
       pickerMenuEl.style.top = `${top}px`;
     }
@@ -449,15 +470,15 @@
     function hidePickerMenu() {
       if (!pickerMenuEl) return;
       pickerMenuEl.hidden = true;
+      if (triggerMenuButton) triggerMenuButton.setAttribute('aria-expanded', 'false');
     }
 
     function showPickerMenu(anchor) {
       ensurePickerMenu();
       if (!pickerMenuEl) return;
       pickerMenuEl.hidden = false;
+      if (triggerMenuButton) triggerMenuButton.setAttribute('aria-expanded', 'true');
       positionPickerMenu(anchor);
-      const firstButton = pickerMenuEl.querySelector('button');
-      if (firstButton) firstButton.focus();
     }
 
     function openFilePicker(event) {
@@ -466,11 +487,20 @@
         event.stopPropagation();
       }
       hideTriggerTooltip();
-      if (directoryInput && event && event.currentTarget === triggerButton) {
-        showPickerMenu(triggerButton);
+      chooseFiles();
+    }
+
+    function openPickerMenu(event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      hideTriggerTooltip();
+      if (pickerMenuEl && !pickerMenuEl.hidden) {
+        hidePickerMenu();
         return;
       }
-      chooseFiles();
+      showPickerMenu(triggerMenuButton || triggerButton);
     }
 
     createDropActions();
@@ -484,6 +514,22 @@
       triggerButton.classList.add('file-input-trigger');
       triggerButton.hidden = false;
       triggerButton.addEventListener('click', openFilePicker);
+      if (directoryInput) {
+        triggerMenuButton = createSplitTrigger(triggerButton, openPickerMenu);
+      }
+      const tooltipTarget = getTriggerTooltipTarget();
+      tooltipTarget.addEventListener('mouseenter', scheduleTriggerTooltip);
+      tooltipTarget.addEventListener('mouseleave', hideTriggerTooltip);
+      tooltipTarget.addEventListener('mouseover', (event) => {
+        if (!tooltipTarget.contains(event.relatedTarget)) scheduleTriggerTooltip();
+      });
+      tooltipTarget.addEventListener('mouseout', (event) => {
+        if (!tooltipTarget.contains(event.relatedTarget)) hideTriggerTooltip();
+      });
+      tooltipTarget.addEventListener('focusin', showTriggerTooltip);
+      tooltipTarget.addEventListener('focusout', (event) => {
+        if (!tooltipTarget.contains(event.relatedTarget)) hideTriggerTooltip();
+      });
       window.addEventListener('resize', () => {
         if (triggerTooltipEl && !triggerTooltipEl.hidden) positionTriggerTooltip();
       });

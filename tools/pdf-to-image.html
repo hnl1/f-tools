@@ -330,13 +330,6 @@
     justify-content: flex-end;
     gap: 8px;
   }
-  .delete-item-btn {
-    min-width: 30px;
-    padding: 5px 9px;
-    color: var(--danger);
-    font-size: 16px;
-    line-height: 1;
-  }
   #bulk-progress-header-summary {
     position: absolute;
     left: 50%;
@@ -736,9 +729,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     compareBtn.hidden = true;
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'button delete-item-btn';
+    deleteBtn.className = 'button icon-action-btn trash danger delete-item-btn';
     deleteBtn.type = 'button';
-    deleteBtn.textContent = '×';
     deleteBtn.title = `删除 ${displayName}`;
     deleteBtn.setAttribute('aria-label', deleteBtn.title);
 

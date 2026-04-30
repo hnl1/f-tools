@@ -91,7 +91,7 @@ test("runtime dependencies are local vendor files", () => {
 test("tool pages keep their key controls", () => {
   const expectations = {
     "tools/clipboard.html": ["id=\"linkName\"", "id=\"linkUrl\"", "id=\"copyLinkButton\"", "id=\"copyMarkdownButton\""],
-    "tools/video-compare.html": ["id=\"grid\"", "id=\"sync-toggle\"", "id=\"sync-reset\"", "id=\"clear\"", "id=\"file-input\""],
+    "tools/video-compare.html": ["id=\"grid\"", "id=\"sync-toggle\"", "id=\"sync-reset\"", "clearButton:", "id=\"file-input\""],
     "tools/image-compare.html": ["id=\"drop-hint\"", "id=\"grid\"", "id=\"zoom-strip\"", "id=\"file-input\""],
     "tools/pdf-compare.html": ["id=\"drop-hint\"", "id=\"grid\"", "id=\"sync-mode\"", "id=\"file-input\"", "../vendor/pdfjs/pdf.min.js"],
     "tools/pdf-to-image.html": [
@@ -117,7 +117,8 @@ test("tool pages keep their key controls", () => {
 test("tool pages link back to the home page", () => {
   for (const page of toolPages) {
     const html = read(page);
-    assert.match(html, /<a href="\.\.\/index\.html" class="back-link" aria-label="主页" title="主页">\s*<\/a>/, `${page} should expose the top-left home link as an icon`);
+    assert.match(html, /<script src="\.\.\/assets\/home-link\.js"><\/script>/, `${page} should load the shared home link`);
+    assert.match(html, /ToolHeader\.mount\(/, `${page} should mount the shared tool header`);
     assert.doesNotMatch(html, /← 返回/, `${page} should not label the home link as back`);
   }
 });
@@ -126,7 +127,7 @@ test("pdf to image hides advanced output options", () => {
   const html = read("tools/pdf-to-image.html");
 
   assert.match(html, /<title>PDF 转图片版<\/title>/, "pdf-to-image page title should use the shorter name");
-  assert.match(html, /<h1>PDF 转图片版<\/h1>/, "pdf-to-image header should use the shorter name");
+  assert.match(html, /title:\s*'PDF 转图片版'/, "pdf-to-image header should use the shorter name");
   assert.doesNotMatch(html, /PDF 转图片版 PDF/, "pdf-to-image should not use the old longer name");
   assert.doesNotMatch(html, /id="scale"/, "pdf-to-image should not expose render scale control");
   assert.doesNotMatch(html, /渲染倍率/, "pdf-to-image should not show render scale label");
@@ -242,17 +243,16 @@ test("pdf to image shows bulk conversion progress", () => {
 
 test("pdf to image keeps global controls in the sticky header", () => {
   const html = read("tools/pdf-to-image.html");
-  const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? "";
   const main = html.match(/<main[\s\S]*?<\/main>/)?.[0] ?? "";
 
-  assert.match(header, /class="[^"]*\bheader-toolbar\b[^"]*"/, "pdf-to-image should use a top header toolbar");
-  assert.match(header, /id="generate-all-btn"/, "generate-all should live in the top header");
-  assert.match(header, /id="download-all-btn"/, "download-all should live in the top header");
-  assert.match(header, /id="generate-all-btn"[^>]*>\s*转换\s*</, "header convert button should use short label");
-  assert.match(header, /id="download-all-btn"[^>]*>\s*下载\s*</, "header download button should use short label");
-  assert.doesNotMatch(header, />\s*生成\s*</, "header should not show generate label");
-  assert.doesNotMatch(header, />\s*全部生成\s*</, "header should not show full generate label");
-  assert.doesNotMatch(header, />\s*全部下载\s*</, "header should not show full download label");
+  assert.match(html, /<div id="header-controls" hidden>/, "pdf-to-image should stage controls for the shared header");
+  assert.match(html, /ToolHeader\.mount\(\{[\s\S]*title:\s*'PDF 转图片版'/, "pdf-to-image should use the shared header");
+  assert.match(html, /controls:\s*Array\.from\(headerControlsHost\.children\)/, "pdf-to-image should move global controls into the header");
+  assert.match(html, /id="generate-all-btn"[^>]*>\s*转换\s*</, "header convert button should use short label");
+  assert.match(html, /id="download-all-btn"[^>]*>\s*下载\s*</, "header download button should use short label");
+  assert.doesNotMatch(html, />\s*生成\s*</, "header should not show generate label");
+  assert.doesNotMatch(html, />\s*全部生成\s*</, "header should not show full generate label");
+  assert.doesNotMatch(html, />\s*全部下载\s*</, "header should not show full download label");
 
   assert.doesNotMatch(main, /id="scale"/, "main content should not contain the global scale control");
   assert.doesNotMatch(main, /id="generate-all-btn"/, "main content should not contain the global generate-all action");
@@ -266,7 +266,8 @@ test("pdf to image uses the shared upload prompt", () => {
   assert.match(main, /class="[^"]*\bfile-drop-zone\b[^"]*"/, "pdf-to-image should use the shared input box style");
   assert.match(main, /class="[^"]*\bvisually-hidden-file\b[^"]*"/, "pdf-to-image should keep the native file input hidden");
   assert.match(main, /class="[^"]*\bfile-drop-icon\b[^"]*"/, "pdf-to-image should show the shared drop prompt icon");
-  assert.match(main, /class="[^"]*\bfile-drop-title\b[^"]*"[^>]*>\s*拖入、粘贴或点击添加 PDF\s*</, "pdf-to-image should show the shared drop prompt title");
+  assert.match(main, /class="[^"]*\bfile-drop-title\b[^"]*"/, "pdf-to-image should include the shared drop prompt title host");
+  assert.match(html, /\bsubject:\s*'PDF'/, "pdf-to-image should let the shared drop zone format the prompt title");
   assert.match(main, /class="[^"]*\bfile-drop-status\b[^"]*"[^>]*\bhidden\b/, "pdf-to-image should keep initial status hidden");
   assert.doesNotMatch(main, /class="[^"]*\bpanel-head\b[^"]*"/, "pdf-to-image should not show an input section heading");
   assert.doesNotMatch(main, /等待(?:添加|选择) PDF/, "pdf-to-image should not show initial waiting copy");
@@ -299,7 +300,7 @@ test("file input pages use the shared drop zone", () => {
     assert.doesNotMatch(html, /id="(?:choose-file-btn|choose-pdf-btn)"/, `${page} should not include an internal choose button`);
     assert.doesNotMatch(html, /class="[^"]*\bfile-choose-button\b[^"]*"/, `${page} should not depend on the old choose button class`);
     assert.doesNotMatch(html, />\s*选择(?:视频|图片| PDF)\s*</, `${page} should not show the old choose button text`);
-    assert.match(html, /拖入、粘贴或点击添加/, `${page} should keep the drop zone title`);
+    assert.match(html, /class="[^"]*\bfile-drop-title\b[^"]*"/, `${page} should include a shared drop zone title host`);
     assert.match(html, /class="[^"]*\bfile-drop-status\b[^"]*"/, `${page} should keep status text in the drop zone`);
     assert.match(html, /class="[^"]*\bfile-drop-status\b[^"]*"[^>]*\bhidden\b/, `${page} should keep initial status hidden`);
     assert.ok(!html.includes(fileInputSupportText[page]), `${page} should not include initial supported format text`);
@@ -322,8 +323,8 @@ test("file input pages use the shared drop zone", () => {
 test("shared tool header style is sticky", () => {
   const css = read("assets/common.css");
 
-  assert.match(css, /body\.tool-page > header\s*\{[\s\S]*position:\s*sticky;/);
-  assert.match(css, /body\.tool-page > header\s*\{[\s\S]*top:\s*0;/);
+  assert.match(css, /\.tool-header\s*\{[\s\S]*position:\s*sticky;/);
+  assert.match(css, /\.tool-header\s*\{[\s\S]*top:\s*0;/);
 });
 
 test("shared file drop zone style exists", () => {
