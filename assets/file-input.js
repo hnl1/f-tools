@@ -4,9 +4,9 @@
     return typeof value === 'string' ? document.querySelector(value) : value;
   }
 
-  async function getFilesFromClipboard(clipboardData) {
+  async function getFileEntriesFromClipboard(clipboardData) {
     if (!clipboardData) return [];
-    return getFilesFromDataTransfer(clipboardData);
+    return getFileEntriesFromDataTransfer(clipboardData);
   }
 
   function readEntryFile(entry) {
@@ -35,20 +35,44 @@
     });
   }
 
-  async function getFilesFromEntry(entry) {
+  function normalizeRelativePath(value, fallbackName) {
+    const path = String(value || fallbackName || '')
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+      .replace(/\/+/g, '/');
+    return path || String(fallbackName || '');
+  }
+
+  function createFileEntry(file, sourcePath) {
+    const relativePath = normalizeRelativePath(sourcePath || file.webkitRelativePath, file.name);
+    const pathParts = relativePath.split('/').filter(Boolean);
+    return {
+      file,
+      name: file.name || pathParts[pathParts.length - 1] || '未命名文件',
+      relativePath,
+      pathParts,
+      sourcePath: sourcePath || file.webkitRelativePath || file.name || '',
+    };
+  }
+
+  function createFileEntries(fileList) {
+    return Array.from(fileList || []).map((file) => createFileEntry(file));
+  }
+
+  async function getFileEntriesFromEntry(entry) {
     if (!entry) return [];
     if (entry.isFile) {
       const file = await readEntryFile(entry);
-      return file ? [file] : [];
+      return file ? [createFileEntry(file, entry.fullPath)] : [];
     }
     if (!entry.isDirectory) return [];
 
     const entries = await readAllDirectoryEntries(entry.createReader());
-    const nestedFiles = await Promise.all(entries.map(getFilesFromEntry));
-    return nestedFiles.flat();
+    const nestedFileEntries = await Promise.all(entries.map(getFileEntriesFromEntry));
+    return nestedFileEntries.flat();
   }
 
-  async function getFilesFromDataTransfer(dataTransfer) {
+  async function getFileEntriesFromDataTransfer(dataTransfer) {
     if (!dataTransfer) return [];
 
     const items = Array.from(dataTransfer.items || []);
@@ -57,10 +81,45 @@
       .map((item) => item.webkitGetAsEntry())
       .filter(Boolean);
 
-    if (!entries.length) return Array.from(dataTransfer.files || []);
+    if (!entries.length) return createFileEntries(dataTransfer.files);
 
-    const files = (await Promise.all(entries.map(getFilesFromEntry))).flat();
-    return files.length ? files : Array.from(dataTransfer.files || []);
+    const fileEntries = (await Promise.all(entries.map(getFileEntriesFromEntry))).flat();
+    return fileEntries.length ? fileEntries : createFileEntries(dataTransfer.files);
+  }
+
+  function buildFileTree(fileEntries) {
+    const root = { type: 'directory', name: '', path: '', children: [] };
+
+    for (const entry of fileEntries) {
+      const parts = entry.pathParts.length ? entry.pathParts : [entry.name];
+      let node = root;
+      let currentPath = '';
+
+      for (let index = 0; index < parts.length; index += 1) {
+        const part = parts[index];
+        currentPath = currentPath ? `${currentPath}/${part}` : part;
+        const isFile = index === parts.length - 1;
+        if (isFile) {
+          node.children.push({
+            type: 'file',
+            name: part,
+            path: currentPath,
+            file: entry.file,
+            entry,
+          });
+          continue;
+        }
+
+        let child = node.children.find((item) => item.type === 'directory' && item.name === part);
+        if (!child) {
+          child = { type: 'directory', name: part, path: currentPath, children: [] };
+          node.children.push(child);
+        }
+        node = child;
+      }
+    }
+
+    return root;
   }
 
   function isFileDrag(event) {
@@ -167,8 +226,6 @@
     }, options.sourceLabels || {});
 
     let hasItems = false;
-    let triggerShownOnce = false;
-    let triggerIntroTimer = 0;
     let triggerTooltipTimer = 0;
     let triggerTooltipEl = null;
     let pickerMenuEl = null;
@@ -207,35 +264,12 @@
       triggerTooltipEl.hidden = true;
     }
 
-    function playTriggerIntro() {
-      if (!triggerButton) return;
-      clearTimeout(triggerIntroTimer);
-      clearTimeout(triggerTooltipTimer);
-      triggerButton.classList.remove('is-newly-visible');
-      void triggerButton.offsetWidth;
-      triggerButton.classList.add('is-newly-visible');
-      showTriggerTooltip();
-      triggerIntroTimer = setTimeout(() => {
-        triggerButton.classList.remove('is-newly-visible');
-      }, 1700);
-      triggerTooltipTimer = setTimeout(hideTriggerTooltip, 2200);
-    }
-
     function setHasItems(value) {
       const next = Boolean(value);
       if (next === hasItems) return;
       hasItems = next;
       zone.classList.toggle('is-collapsed', hasItems);
-      if (!triggerButton) return;
-      triggerButton.hidden = !hasItems;
-      if (hasItems) {
-        if (!triggerShownOnce) {
-          triggerShownOnce = true;
-          playTriggerIntro();
-        }
-      } else {
-        hideTriggerTooltip();
-      }
+      hideTriggerTooltip();
     }
 
     const statusId = status && status.id;
@@ -271,12 +305,14 @@
       zone.classList.toggle('dragging', isDragging);
     }
 
-    function acceptFiles(fileList, source) {
-      const incoming = Array.from(fileList || []);
+    function acceptFileEntries(fileEntries, source) {
+      const incomingEntries = Array.from(fileEntries || []);
+      const incoming = incomingEntries.map((entry) => entry.file);
       if (!incoming.length) return false;
 
-      const accepted = incoming.filter((file) => matchesAccept(file, accept));
-      const files = multiple ? accepted : accepted.slice(0, 1);
+      const acceptedEntries = incomingEntries.filter((entry) => matchesAccept(entry.file, accept));
+      const entries = multiple ? acceptedEntries : acceptedEntries.slice(0, 1);
+      const files = entries.map((entry) => entry.file);
       if (!files.length) {
         setStatus(typeof rejectedText === 'function' ? rejectedText(incoming, sourceLabels[source]) : rejectedText, true);
         return false;
@@ -286,8 +322,19 @@
         ? acceptedText(files, sourceLabels[source])
         : acceptedText;
       if (message) setStatus(message, false);
-      onFiles(files, { source, sourceLabel: sourceLabels[source], allFiles: incoming });
+      onFiles(files, {
+        source,
+        sourceLabel: sourceLabels[source],
+        allFiles: incoming,
+        allFileEntries: incomingEntries,
+        fileEntries: entries,
+        fileTree: buildFileTree(entries),
+      });
       return true;
+    }
+
+    function acceptFiles(fileList, source) {
+      return acceptFileEntries(createFileEntries(fileList), source);
     }
 
     input.addEventListener('change', () => {
@@ -435,12 +482,8 @@
 
     if (triggerButton) {
       triggerButton.classList.add('file-input-trigger');
-      triggerButton.hidden = true;
+      triggerButton.hidden = false;
       triggerButton.addEventListener('click', openFilePicker);
-      triggerButton.addEventListener('mouseenter', showTriggerTooltip);
-      triggerButton.addEventListener('focus', showTriggerTooltip);
-      triggerButton.addEventListener('mouseleave', hideTriggerTooltip);
-      triggerButton.addEventListener('blur', hideTriggerTooltip);
       window.addEventListener('resize', () => {
         if (triggerTooltipEl && !triggerTooltipEl.hidden) positionTriggerTooltip();
       });
@@ -486,15 +529,15 @@
       if (!isFileDrag(event) && !(event.dataTransfer && event.dataTransfer.files.length)) return;
       event.preventDefault();
       setDragging(false);
-      const files = await getFilesFromDataTransfer(event.dataTransfer);
-      acceptFiles(files, 'drop');
+      const fileEntries = await getFileEntriesFromDataTransfer(event.dataTransfer);
+      acceptFileEntries(fileEntries, 'drop');
     });
 
     document.addEventListener('paste', async (event) => {
-      const files = await getFilesFromClipboard(event.clipboardData);
-      if (!files.length) return;
+      const fileEntries = await getFileEntriesFromClipboard(event.clipboardData);
+      if (!fileEntries.length) return;
 
-      if (acceptFiles(files, 'paste')) {
+      if (acceptFileEntries(fileEntries, 'paste')) {
         event.preventDefault();
       }
     });

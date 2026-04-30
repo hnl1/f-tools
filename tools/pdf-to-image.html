@@ -79,7 +79,7 @@
     justify-content: center;
     gap: 6px;
   }
-  .button:hover {
+  .button:not(:disabled):hover {
     background: var(--button-hover);
   }
   main {
@@ -162,7 +162,7 @@
     border-color: var(--accent);
     color: #fff;
   }
-  .button.primary:hover {
+  .button.primary:not(:disabled):hover {
     background: var(--accent-strong);
   }
   .button:disabled {
@@ -176,6 +176,123 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+  .bulk-progress {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    z-index: 20;
+    width: min(560px, calc(100vw - 48px));
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+    transform: translateX(-50%);
+  }
+  .bulk-progress[hidden] {
+    display: none;
+  }
+  .bulk-progress-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: grab;
+    user-select: none;
+  }
+  .bulk-progress.is-dragging .bulk-progress-head {
+    cursor: grabbing;
+  }
+  .bulk-progress-title {
+    font-weight: 600;
+  }
+  .bulk-progress-title-row {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .bulk-progress-hint {
+    color: var(--text-faint);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+  .bulk-progress-hint[hidden] {
+    display: none;
+  }
+  .bulk-progress-count {
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .bulk-progress-close {
+    width: 24px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    color: var(--text-muted);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    font-size: 18px;
+    line-height: 1;
+  }
+  .bulk-progress-close:not(:disabled):hover {
+    color: var(--accent);
+    background: var(--accent-tint);
+    border-color: transparent;
+  }
+  .bulk-progress.is-opening {
+    transform-origin: top center;
+    animation: bulkProgressOpen 0.34s cubic-bezier(0.18, 0.9, 0.22, 1);
+  }
+  @keyframes bulkProgressOpen {
+    0% {
+      opacity: 0;
+      clip-path: inset(0 45% 92% 45% round 999px);
+      filter: blur(4px);
+    }
+    65% {
+      opacity: 1;
+      clip-path: inset(0 0 0 0 round 10px);
+      filter: blur(0);
+    }
+    82% {
+      clip-path: inset(0 1.5% 0 1.5% round 10px);
+    }
+    100% {
+      opacity: 1;
+      clip-path: inset(0 0 0 0 round 10px);
+      filter: blur(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bulk-progress.is-opening {
+      animation: none;
+    }
+  }
+  .bulk-progress-track {
+    height: 8px;
+    overflow: hidden;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  .bulk-progress-bar {
+    width: 0%;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.2s ease;
+  }
+  .bulk-progress-meta {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
   }
   .pdf-item {
     display: grid;
@@ -191,9 +308,9 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
   }
   .pdf-status {
     margin-top: 4px;
@@ -220,6 +337,12 @@
     font-size: 16px;
     line-height: 1;
   }
+  #bulk-progress-header-summary {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+  }
   @media (max-width: 820px) {
     main {
       padding: 0;
@@ -233,9 +356,10 @@
 </head>
 <body class="tool-page">
 <div id="header-controls" hidden>
-  <button class="button" id="add-pdf-btn" type="button">添加 PDF</button>
   <button class="button primary" id="generate-all-btn" type="button" disabled>转换</button>
   <button class="button" id="download-all-btn" type="button" disabled>下载</button>
+  <button class="button" id="add-pdf-btn" type="button">添加 PDF</button>
+  <button class="button" id="bulk-progress-header-summary" type="button" hidden>已处理 0 / 0</button>
 </div>
 
 <main>
@@ -254,6 +378,23 @@
           <div id="pdf-to-image-drop-title" class="file-drop-title"></div>
         </div>
         <div id="pdf-to-image-drop-status" class="file-drop-status" hidden></div>
+      </div>
+
+      <div id="bulk-progress" class="bulk-progress" hidden>
+        <div class="bulk-progress-head">
+          <span class="bulk-progress-title-row">
+            <span id="bulk-progress-title" class="bulk-progress-title">转换中</span>
+            <span id="bulk-progress-hint" class="bulk-progress-hint" hidden>请尽量保持此页面在前台，否则浏览器可能降低处理速度。</span>
+          </span>
+          <span>
+            <span id="bulk-progress-count" class="bulk-progress-count">0 / 0</span>
+            <button id="bulk-progress-close" class="button bulk-progress-close" type="button" aria-label="关闭进度详情">×</button>
+          </span>
+        </div>
+        <div class="bulk-progress-track" aria-hidden="true">
+          <div id="bulk-progress-bar" class="bulk-progress-bar"></div>
+        </div>
+        <div id="bulk-progress-meta" class="bulk-progress-meta"></div>
       </div>
 
       <div id="pdf-list" class="pdf-list" aria-live="polite">
@@ -283,14 +424,27 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   const addPdfBtn = document.getElementById('add-pdf-btn');
   const generateAllBtn = document.getElementById('generate-all-btn');
   const downloadAllBtn = document.getElementById('download-all-btn');
+  const bulkProgressHeaderSummary = document.getElementById('bulk-progress-header-summary');
+  const bulkProgress = document.getElementById('bulk-progress');
+  const bulkProgressHead = bulkProgress.querySelector('.bulk-progress-head');
+  const bulkProgressTitle = document.getElementById('bulk-progress-title');
+  const bulkProgressCount = document.getElementById('bulk-progress-count');
+  const bulkProgressBar = document.getElementById('bulk-progress-bar');
+  const bulkProgressMeta = document.getElementById('bulk-progress-meta');
+  const bulkProgressHint = document.getElementById('bulk-progress-hint');
+  const bulkProgressClose = document.getElementById('bulk-progress-close');
   const pdfList = document.getElementById('pdf-list');
   const logEl = document.getElementById('log');
   const RENDER_SCALE = 2;
+  const GENERATE_ALL_CONCURRENCY = 4;
 
   /** @type {{id:string, file:File, status:string, outputBlob:Blob|null, outputName:string, compareUrl:string, error:string, elements:any}[]} */
   let items = [];
   let nextItemId = 1;
   let isGenerating = false;
+  let cancelRequested = false;
+  let isBulkProgressDismissed = false;
+  let bulkProgressDrag = null;
   let dropZone = null;
 
   function log(message, isError = false) {
@@ -314,17 +468,167 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   function updateGlobalControls() {
     const hasItems = items.length > 0;
     const hasGenerated = items.some((item) => item.outputBlob);
+    updateHeaderProgressSummary();
     if (dropZone) dropZone.setHasItems(hasItems);
-    generateAllBtn.disabled = !hasItems || isGenerating;
+    generateAllBtn.textContent = isGenerating ? '停止' : '转换';
+    generateAllBtn.classList.toggle('danger', isGenerating);
+    generateAllBtn.classList.toggle('primary', !isGenerating);
+    generateAllBtn.disabled = isGenerating ? cancelRequested : !hasItems;
     downloadAllBtn.disabled = !hasGenerated || isGenerating;
     pdfList.hidden = !hasItems;
     clearBtn.setEnabled(hasItems && !isGenerating);
+  }
+
+  function getProcessedItemCount() {
+    return items.filter((item) => item.outputBlob || item.status === 'error').length;
+  }
+
+  function getFailedItemCount() {
+    return items.filter((item) => item.status === 'error').length;
+  }
+
+  function updateHeaderProgressSummary() {
+    const total = items.length;
+    const completed = getProcessedItemCount();
+    bulkProgressHeaderSummary.hidden = total === 0;
+    bulkProgressHeaderSummary.textContent = `已处理 ${completed} / ${total}`;
+  }
+
+  function requestStopGenerating() {
+    if (!isGenerating || cancelRequested) return;
+    cancelRequested = true;
+    updateGlobalControls();
+    log('正在停止转换，当前页处理完后会停止。');
+  }
+
+  function hideBulkProgress() {
+    bulkProgressTitle.textContent = '转换中';
+    bulkProgressCount.textContent = '0 / 0';
+    bulkProgressBar.style.width = '0%';
+    bulkProgressMeta.textContent = '';
+    bulkProgressHint.hidden = true;
+    bulkProgressHeaderSummary.textContent = '已处理 0 / 0';
+    bulkProgressHeaderSummary.hidden = true;
+    isBulkProgressDismissed = false;
+    bulkProgress.hidden = true;
+  }
+
+  function closeBulkProgress() {
+    isBulkProgressDismissed = true;
+    bulkProgress.hidden = true;
+  }
+
+  function showBulkProgress(animate = true) {
+    if (!items.length) return;
+    isBulkProgressDismissed = false;
+    if (!isGenerating) updateIdleBulkProgress();
+    bulkProgress.hidden = false;
+    if (!animate) return;
+    bulkProgress.classList.remove('is-opening');
+    void bulkProgress.offsetWidth;
+    bulkProgress.classList.add('is-opening');
+  }
+
+  function updateIdleBulkProgress() {
+    const total = items.length;
+    const completed = getProcessedItemCount();
+    const failed = getFailedItemCount();
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+    bulkProgressTitle.textContent = '处理进度';
+    bulkProgressCount.textContent = `${completed} / ${total}`;
+    bulkProgressBar.style.width = `${percent}%`;
+    bulkProgressHint.hidden = true;
+    bulkProgressMeta.textContent = failed
+      ? `已完成 ${completed} 个，失败 ${failed} 个`
+      : `已完成 ${completed} 个`;
+  }
+
+  function clampBulkProgressPosition(left, top) {
+    const rect = bulkProgress.getBoundingClientRect();
+    return {
+      left: Math.min(Math.max(8, left), Math.max(8, window.innerWidth - rect.width - 8)),
+      top: Math.min(Math.max(56, top), Math.max(56, window.innerHeight - rect.height - 8)),
+    };
+  }
+
+  function startBulkProgressDrag(event) {
+    if (event.target.closest('button')) return;
+    const rect = bulkProgress.getBoundingClientRect();
+    bulkProgressDrag = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    bulkProgress.style.left = `${rect.left}px`;
+    bulkProgress.style.top = `${rect.top}px`;
+    bulkProgress.style.right = 'auto';
+    bulkProgress.style.bottom = 'auto';
+    bulkProgress.style.transform = 'none';
+    bulkProgress.classList.add('is-dragging');
+    bulkProgressHead.setPointerCapture(event.pointerId);
+  }
+
+  function moveBulkProgress(event) {
+    if (!bulkProgressDrag || event.pointerId !== bulkProgressDrag.pointerId) return;
+    const next = clampBulkProgressPosition(
+      event.clientX - bulkProgressDrag.offsetX,
+      event.clientY - bulkProgressDrag.offsetY
+    );
+    bulkProgress.style.left = `${next.left}px`;
+    bulkProgress.style.top = `${next.top}px`;
+  }
+
+  function stopBulkProgressDrag(event) {
+    if (!bulkProgressDrag || event.pointerId !== bulkProgressDrag.pointerId) return;
+    bulkProgress.classList.remove('is-dragging');
+    bulkProgressDrag = null;
+  }
+
+  function formatDuration(milliseconds) {
+    const totalSeconds = Math.max(0, Math.round(milliseconds / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (!minutes) return `${seconds}s`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (!hours) return `${minutes}m ${seconds}s`;
+    return `${hours}h ${remainingMinutes}m ${seconds}s`;
+  }
+
+  function updateBulkProgress(state) {
+    const total = state.total || 0;
+    const completed = state.completed || 0;
+    const failed = state.failed || 0;
+    const elapsed = state.startedAt ? Date.now() - state.startedAt : 0;
+    const speed = elapsed > 0 ? completed / (elapsed / 1000) : 0;
+    const remaining = speed > 0 && completed < total ? (total - completed) / speed * 1000 : 0;
+    const percent = total ? Math.round((completed / total) * 100) : 0;
+    updateHeaderProgressSummary();
+    if (!isBulkProgressDismissed) bulkProgress.hidden = false;
+    bulkProgressTitle.textContent = state.title || '转换中';
+    bulkProgressCount.textContent = `${completed} / ${total}`;
+    bulkProgressBar.style.width = `${percent}%`;
+    bulkProgressHint.hidden = state.title !== '转换中';
+    const completedText = failed
+      ? `已完成 ${completed} 个，失败 ${failed} 个`
+      : `已完成 ${completed} 个`;
+    const speedText = speed > 0 ? `${speed.toFixed(2)} 个/秒` : '计算中';
+    const parts = [
+      completedText,
+      `耗时 ${formatDuration(elapsed)}`,
+      `平均 ${speedText}`,
+    ];
+    if (completed < total) {
+      parts.splice(2, 0, `预计还需 ${formatDuration(remaining)}`);
+    }
+    bulkProgressMeta.textContent = parts.join('，');
   }
 
   function clearAll() {
     if (isGenerating || !items.length) return;
     items.forEach((item) => item.elements.row.remove());
     items = [];
+    hideBulkProgress();
     log('已清空全部 PDF。');
     updateGlobalControls();
   }
@@ -338,29 +642,55 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     item.elements.generateBtn.disabled = isGenerating || status === 'generating';
     item.elements.deleteBtn.disabled = isGenerating;
     item.elements.downloadBtn.hidden = !item.outputBlob;
+    item.elements.downloadBtn.disabled = !item.outputBlob;
     item.elements.compareBtn.hidden = !item.compareUrl;
+    item.elements.compareBtn.disabled = !item.compareUrl;
     updateGlobalControls();
   }
 
-  function addPdfFiles(files, sourceLabel) {
+  function getDisplayPathSeparator() {
+    return /Win/i.test(navigator.platform || navigator.userAgent || '') ? '\\' : '/';
+  }
+
+  function getPdfDisplayName(file, fileEntry) {
+    const relativePath = fileEntry && fileEntry.relativePath;
+    if (!relativePath || relativePath === file.name) return file.name || '未命名 PDF';
+    return relativePath.split('/').filter(Boolean).join(getDisplayPathSeparator());
+  }
+
+  function getPdfOutputPath(file, fileEntry, outputName) {
+    const relativePath = fileEntry && fileEntry.relativePath;
+    if (!relativePath || relativePath === file.name) return outputName;
+    const parts = relativePath.split('/').filter(Boolean);
+    parts[parts.length - 1] = outputName;
+    return parts.join('/');
+  }
+
+  function addPdfFiles(files, sourceLabel, fileEntries = []) {
+    const entryByFile = new Map(fileEntries.map((entry) => [entry.file, entry]));
     const pdfFiles = Array.from(files || []).filter(isPdfFile);
     if (!pdfFiles.length) {
       log(`${sourceLabel}的文件不是 PDF，请使用 .pdf 文件。`, true);
       return;
     }
 
-    pdfFiles.forEach(addPdfItem);
+    pdfFiles.forEach((file) => addPdfItem(file, entryByFile.get(file)));
     log(`已${sourceLabel} ${pdfFiles.length} 个 PDF，可单独转换或点击“转换”。`);
     updateGlobalControls();
   }
 
-  function addPdfItem(file) {
+  function addPdfItem(file, fileEntry) {
+    const displayName = getPdfDisplayName(file, fileEntry);
+    const outputName = makeOutputName(file.name);
     const item = {
       id: `pdf-item-${nextItemId++}`,
       file,
+      fileEntry,
+      displayName,
       status: 'pending',
       outputBlob: null,
-      outputName: makeOutputName(file.name),
+      outputName,
+      outputPath: getPdfOutputPath(file, fileEntry, outputName),
       compareUrl: '',
       error: '',
       elements: {},
@@ -375,7 +705,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
     const nameEl = document.createElement('div');
     nameEl.className = 'pdf-name';
-    nameEl.textContent = file.name || '未命名 PDF';
+    nameEl.textContent = displayName;
     nameEl.title = nameEl.textContent;
 
     const statusEl = document.createElement('div');
@@ -409,7 +739,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     deleteBtn.className = 'button delete-item-btn';
     deleteBtn.type = 'button';
     deleteBtn.textContent = '×';
-    deleteBtn.title = `删除 ${file.name || '未命名 PDF'}`;
+    deleteBtn.title = `删除 ${displayName}`;
     deleteBtn.setAttribute('aria-label', deleteBtn.title);
 
     actions.appendChild(generateBtn);
@@ -437,7 +767,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     if (!item || isGenerating) return;
     items = items.filter((entry) => entry !== item);
     item.elements.row.remove();
-    log(`已删除：${item.file.name || '未命名 PDF'}`);
+    log(`已删除：${item.displayName || item.file.name || '未命名 PDF'}`);
     updateGlobalControls();
   }
 
@@ -450,6 +780,148 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+  }
+
+  const ZIP_MAX_32BIT_SIZE = 0xffffffff;
+  let crc32Table = null;
+
+  function getCrc32Table() {
+    if (crc32Table) return crc32Table;
+    crc32Table = new Uint32Array(256);
+    for (let index = 0; index < 256; index += 1) {
+      let value = index;
+      for (let bit = 0; bit < 8; bit += 1) {
+        value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
+      }
+      crc32Table[index] = value >>> 0;
+    }
+    return crc32Table;
+  }
+
+  function calculateCrc32(buffer) {
+    const table = getCrc32Table();
+    const bytes = new Uint8Array(buffer);
+    let crc = 0xffffffff;
+    for (let index = 0; index < bytes.length; index += 1) {
+      crc = table[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function getZipDateTime(date = new Date()) {
+    const year = Math.max(1980, date.getFullYear());
+    return {
+      time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+      date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
+    };
+  }
+
+  function normalizeZipPath(value, fallbackName) {
+    const path = String(value || fallbackName || 'converted.pdf')
+      .replace(/\\/g, '/')
+      .split('/')
+      .filter((part) => part && part !== '.' && part !== '..')
+      .join('/');
+    return path || fallbackName || 'converted.pdf';
+  }
+
+  function makeUniqueZipPaths(entries) {
+    const seen = new Map();
+    return entries.map((entry) => {
+      const normalizedPath = normalizeZipPath(entry.path, entry.name);
+      const count = seen.get(normalizedPath) || 0;
+      seen.set(normalizedPath, count + 1);
+      if (!count) return Object.assign({}, entry, { path: normalizedPath });
+
+      const slashIndex = normalizedPath.lastIndexOf('/');
+      const directory = slashIndex >= 0 ? normalizedPath.slice(0, slashIndex + 1) : '';
+      const fileName = slashIndex >= 0 ? normalizedPath.slice(slashIndex + 1) : normalizedPath;
+      const dotIndex = fileName.lastIndexOf('.');
+      const baseName = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
+      const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
+      return Object.assign({}, entry, {
+        path: `${directory}${baseName} (${count + 1})${extension}`,
+      });
+    });
+  }
+
+  function createLocalFileHeader(nameBytes, crc32, size, zipTime, zipDate) {
+    const header = new Uint8Array(30 + nameBytes.length);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, 0x04034b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 0x0800, true);
+    view.setUint16(8, 0, true);
+    view.setUint16(10, zipTime, true);
+    view.setUint16(12, zipDate, true);
+    view.setUint32(14, crc32, true);
+    view.setUint32(18, size, true);
+    view.setUint32(22, size, true);
+    view.setUint16(26, nameBytes.length, true);
+    view.setUint16(28, 0, true);
+    header.set(nameBytes, 30);
+    return header;
+  }
+
+  function createCentralDirectoryHeader(nameBytes, crc32, size, offset, zipTime, zipDate) {
+    const header = new Uint8Array(46 + nameBytes.length);
+    const view = new DataView(header.buffer);
+    view.setUint32(0, 0x02014b50, true);
+    view.setUint16(4, 20, true);
+    view.setUint16(6, 20, true);
+    view.setUint16(8, 0x0800, true);
+    view.setUint16(10, 0, true);
+    view.setUint16(12, zipTime, true);
+    view.setUint16(14, zipDate, true);
+    view.setUint32(16, crc32, true);
+    view.setUint32(20, size, true);
+    view.setUint32(24, size, true);
+    view.setUint16(28, nameBytes.length, true);
+    view.setUint16(30, 0, true);
+    view.setUint16(32, 0, true);
+    view.setUint16(34, 0, true);
+    view.setUint16(36, 0, true);
+    view.setUint32(38, 0, true);
+    view.setUint32(42, offset, true);
+    header.set(nameBytes, 46);
+    return header;
+  }
+
+  async function createZipBlob(entries) {
+    const encoder = new TextEncoder();
+    const localParts = [];
+    const centralParts = [];
+    const zipEntries = makeUniqueZipPaths(entries);
+    let offset = 0;
+
+    for (const entry of zipEntries) {
+      const blob = entry.blob;
+      if (blob.size > ZIP_MAX_32BIT_SIZE || offset > ZIP_MAX_32BIT_SIZE) {
+        throw new Error('ZIP 文件过大，浏览器端暂不支持超过 4GB 的打包。');
+      }
+
+      const nameBytes = encoder.encode(entry.path);
+      const { time, date } = getZipDateTime();
+      const crc32 = calculateCrc32(await blob.arrayBuffer());
+      const localHeader = createLocalFileHeader(nameBytes, crc32, blob.size, time, date);
+      const centralHeader = createCentralDirectoryHeader(nameBytes, crc32, blob.size, offset, time, date);
+
+      localParts.push(localHeader, blob);
+      centralParts.push(centralHeader);
+      offset += localHeader.byteLength + blob.size;
+    }
+
+    const centralDirectorySize = centralParts.reduce((total, part) => total + part.byteLength, 0);
+    const end = new Uint8Array(22);
+    const view = new DataView(end.buffer);
+    view.setUint32(0, 0x06054b50, true);
+    view.setUint16(8, zipEntries.length, true);
+    view.setUint16(10, zipEntries.length, true);
+    view.setUint32(12, centralDirectorySize, true);
+    view.setUint32(16, offset, true);
+    view.setUint16(20, 0, true);
+
+    return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
   }
 
   function openTransferDb() {
@@ -534,51 +1006,73 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     };
   }
 
-  async function convertPdfToImagePdf(file, onProgress) {
+  function createAbortError() {
+    const error = new Error('已停止转换。');
+    error.name = 'AbortError';
+    return error;
+  }
+
+  function isAbortError(error) {
+    return error && error.name === 'AbortError';
+  }
+
+  function throwIfCancelled(shouldCancel) {
+    if (typeof shouldCancel === 'function' && shouldCancel()) throw createAbortError();
+  }
+
+  async function convertPdfToImagePdf(file, onProgress, shouldCancel) {
+    throwIfCancelled(shouldCancel);
     const arrayBuffer = await file.arrayBuffer();
+    throwIfCancelled(shouldCancel);
     const sourcePdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
     const { jsPDF } = window.jspdf;
     let outputPdf = null;
 
-    for (let pageNumber = 1; pageNumber <= sourcePdf.numPages; pageNumber += 1) {
-      onProgress(pageNumber, sourcePdf.numPages);
+    try {
+      for (let pageNumber = 1; pageNumber <= sourcePdf.numPages; pageNumber += 1) {
+        throwIfCancelled(shouldCancel);
+        onProgress(pageNumber, sourcePdf.numPages);
 
-      const page = await sourcePdf.getPage(pageNumber);
-      const image = await renderPageToImage(page, RENDER_SCALE);
-      const orientation = image.width > image.height ? 'landscape' : 'portrait';
+        const page = await sourcePdf.getPage(pageNumber);
+        throwIfCancelled(shouldCancel);
+        const image = await renderPageToImage(page, RENDER_SCALE);
+        throwIfCancelled(shouldCancel);
+        const orientation = image.width > image.height ? 'landscape' : 'portrait';
 
-      if (!outputPdf) {
-        outputPdf = new jsPDF({
-          unit: 'pt',
-          format: [image.width, image.height],
-          orientation,
-          compress: true,
-        });
-      } else {
-        outputPdf.addPage([image.width, image.height], orientation);
+        if (!outputPdf) {
+          outputPdf = new jsPDF({
+            unit: 'pt',
+            format: [image.width, image.height],
+            orientation,
+            compress: true,
+          });
+        } else {
+          outputPdf.addPage([image.width, image.height], orientation);
+        }
+
+        outputPdf.addImage(
+          image.dataUrl,
+          'JPEG',
+          0,
+          0,
+          image.width,
+          image.height,
+          undefined,
+          'FAST'
+        );
       }
 
-      outputPdf.addImage(
-        image.dataUrl,
-        'JPEG',
-        0,
-        0,
-        image.width,
-        image.height,
-        undefined,
-        'FAST'
-      );
+      throwIfCancelled(shouldCancel);
+      return outputPdf.output('blob');
+    } finally {
+      try { await sourcePdf.destroy(); } catch (_) {}
     }
-
-    try { await sourcePdf.destroy(); } catch (_) {}
-
-    const blob = outputPdf.output('blob');
-    return blob;
   }
 
   async function saveGeneratedResultForCompare(item, blob) {
     item.outputBlob = blob;
     item.outputName = makeOutputName(item.file.name);
+    item.outputPath = getPdfOutputPath(item.file, item.fileEntry, item.outputName);
     item.compareUrl = '';
 
     try {
@@ -593,8 +1087,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   async function generateOne(item) {
     if (!item || isGenerating) return;
 
+    cancelRequested = false;
     isGenerating = true;
     setAllItemButtonsDisabled(true);
+    updateGlobalControls();
     item.outputBlob = null;
     item.compareUrl = '';
     setItemStatus(item, 'generating', '转换中...');
@@ -605,7 +1101,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
         const message = `转换中：第 ${pageNumber} / ${pageCount} 页`;
         item.elements.status.textContent = message;
         log(`${item.file.name}\n${message}`);
-      });
+      }, () => cancelRequested);
       const canCompare = await saveGeneratedResultForCompare(item, blob);
       setItemStatus(
         item,
@@ -618,11 +1114,17 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
         ? `完成：${item.outputName}\n不会自动下载，可点击“下载”或“比较”。`
         : `完成：${item.outputName}\n不会自动下载；比较入口准备失败，可下载后拖入 PDF 对比页。`);
     } catch (error) {
-      console.error(error);
-      setItemStatus(item, 'error', '转换失败：' + (error && error.message ? error.message : String(error)), true);
-      log(`${item.file.name} 转换失败：` + (error && error.message ? error.message : String(error)), true);
+      if (isAbortError(error)) {
+        setItemStatus(item, 'pending', '已停止');
+        log('已停止转换。');
+      } else {
+        console.error(error);
+        setItemStatus(item, 'error', '转换失败：' + (error && error.message ? error.message : String(error)), true);
+        log(`${item.file.name} 转换失败：` + (error && error.message ? error.message : String(error)), true);
+      }
     } finally {
       isGenerating = false;
+      cancelRequested = false;
       setAllItemButtonsDisabled(false);
       updateGlobalControls();
     }
@@ -630,26 +1132,57 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
   async function generateAll() {
     if (isGenerating || !items.length) return;
+    const pendingItems = items.filter((item) => !item.outputBlob);
+    if (!pendingItems.length) {
+      log('所有 PDF 都已转换，可点击“下载”或单项下载。');
+      return;
+    }
 
     isGenerating = true;
     setAllItemButtonsDisabled(true);
     updateGlobalControls();
-    log(`开始转换，共 ${items.length} 个 PDF。`);
+    const concurrency = Math.min(GENERATE_ALL_CONCURRENCY, pendingItems.length);
+    let nextIndex = 0;
+    let completedCount = 0;
+    let activeCount = 0;
+    let failedCount = 0;
+    const startedAt = Date.now();
+    isBulkProgressDismissed = false;
+    log(`开始转换，共 ${pendingItems.length} 个未转换 PDF，并发 ${concurrency}。`);
+    updateBulkProgress({
+      title: '转换中',
+      total: pendingItems.length,
+      completed: completedCount,
+      active: activeCount,
+      failed: failedCount,
+      startedAt,
+    });
 
-    try {
-      for (let index = 0; index < items.length; index += 1) {
-        const item = items[index];
+    async function runNext() {
+      while (!cancelRequested && nextIndex < pendingItems.length) {
+        const index = nextIndex++;
+        const item = pendingItems[index];
+        let wasAborted = false;
         item.outputBlob = null;
         item.compareUrl = '';
-        setItemStatus(item, 'generating', `转换中...（${index + 1} / ${items.length}）`);
-        log(`正在转换 ${index + 1} / ${items.length}：${item.file.name}`);
+        activeCount += 1;
+        setItemStatus(item, 'generating', `转换中...（队列 ${index + 1} / ${pendingItems.length}）`);
+        log(`正在转换 ${index + 1} / ${pendingItems.length}：${item.file.name}`);
+        updateBulkProgress({
+          title: '转换中',
+          total: pendingItems.length,
+          completed: completedCount,
+          active: activeCount,
+          failed: failedCount,
+          startedAt,
+        });
 
         try {
           const blob = await convertPdfToImagePdf(item.file, (pageNumber, pageCount) => {
             const message = `转换中：第 ${pageNumber} / ${pageCount} 页`;
-            item.elements.status.textContent = `${message}（${index + 1} / ${items.length}）`;
-            log(`${item.file.name}\n${message}\n队列：${index + 1} / ${items.length}`);
-          });
+            item.elements.status.textContent = `${message}（队列 ${index + 1} / ${pendingItems.length}）`;
+            log(`${item.file.name}\n${message}\n队列：${index + 1} / ${pendingItems.length}`);
+          }, () => cancelRequested);
           const canCompare = await saveGeneratedResultForCompare(item, blob);
           setItemStatus(
             item,
@@ -659,13 +1192,44 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
               : `已转换：${item.outputName}（比较准备失败，可下载后拖入对比页）`
           );
         } catch (error) {
-          console.error(error);
-          setItemStatus(item, 'error', '转换失败：' + (error && error.message ? error.message : String(error)), true);
+          if (isAbortError(error)) {
+            wasAborted = true;
+            setItemStatus(item, 'pending', '已停止');
+          } else {
+            console.error(error);
+            failedCount += 1;
+            setItemStatus(item, 'error', '转换失败：' + (error && error.message ? error.message : String(error)), true);
+          }
+        } finally {
+          activeCount -= 1;
+          if (!wasAborted) completedCount += 1;
+          updateBulkProgress({
+            title: '转换中',
+            total: pendingItems.length,
+            completed: completedCount,
+            active: activeCount,
+            failed: failedCount,
+            startedAt,
+          });
+          log(`已完成 ${completedCount} / ${pendingItems.length} 个未转换 PDF。`);
         }
       }
-      log('转换完成。不会自动下载，可点击“下载”或单项下载。');
+    }
+
+    try {
+      await Promise.all(Array.from({ length: concurrency }, runNext));
+      updateBulkProgress({
+        title: cancelRequested ? '已停止' : (failedCount ? '转换完成（有失败）' : '转换完成'),
+        total: pendingItems.length,
+        completed: completedCount,
+        active: 0,
+        failed: failedCount,
+        startedAt,
+      });
+      log(cancelRequested ? '已停止转换，未完成的 PDF 可稍后继续转换。' : '转换完成。不会自动下载，可点击“下载”或单项下载。');
     } finally {
       isGenerating = false;
+      cancelRequested = false;
       setAllItemButtonsDisabled(false);
       updateGlobalControls();
     }
@@ -673,20 +1237,56 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
   function setAllItemButtonsDisabled(disabled) {
     items.forEach((item) => {
-      item.elements.generateBtn.disabled = disabled;
-      item.elements.downloadBtn.disabled = disabled;
-      item.elements.compareBtn.disabled = disabled;
+      item.elements.generateBtn.disabled = disabled || item.status === 'generating';
+      item.elements.downloadBtn.disabled = !item.outputBlob;
+      item.elements.compareBtn.disabled = !item.compareUrl;
       item.elements.deleteBtn.disabled = disabled;
     });
   }
 
-  function downloadAllGenerated() {
+  async function downloadAllGenerated() {
+    if (isGenerating) return;
     const generatedItems = items.filter((item) => item.outputBlob);
-    generatedItems.forEach((item) => downloadBlob(item.outputBlob, item.outputName));
-    log(`已触发 ${generatedItems.length} 个文件下载。`);
+    if (!generatedItems.length) return;
+
+    if (generatedItems.length === 1) {
+      const item = generatedItems[0];
+      downloadBlob(item.outputBlob, item.outputName);
+      log(`已触发下载：${item.outputName}`);
+      return;
+    }
+
+    downloadAllBtn.disabled = true;
+    log(`正在打包 ${generatedItems.length} 个 PDF...`);
+    try {
+      const zipBlob = await createZipBlob(generatedItems.map((item) => ({
+        path: item.outputPath || item.outputName,
+        name: item.outputName,
+        blob: item.outputBlob,
+      })));
+      downloadBlob(zipBlob, 'pdf-to-image-results.zip');
+      log(`已打包 ${generatedItems.length} 个 PDF，并保留目录结构。`);
+    } catch (error) {
+      console.error(error);
+      log(error && error.message ? error.message : '打包下载失败。', true);
+    } finally {
+      updateGlobalControls();
+    }
   }
 
-  generateAllBtn.addEventListener('click', generateAll);
+  generateAllBtn.addEventListener('click', () => {
+    if (isGenerating) {
+      requestStopGenerating();
+      return;
+    }
+    generateAll();
+  });
+  bulkProgressClose.addEventListener('click', closeBulkProgress);
+  bulkProgressHeaderSummary.addEventListener('click', showBulkProgress);
+  bulkProgressHead.addEventListener('pointerdown', startBulkProgressDrag);
+  bulkProgressHead.addEventListener('pointermove', moveBulkProgress);
+  bulkProgressHead.addEventListener('pointerup', stopBulkProgressDrag);
+  bulkProgressHead.addEventListener('pointercancel', stopBulkProgressDrag);
   downloadAllBtn.addEventListener('click', downloadAllGenerated);
 
   dropZone = FileInputDropZone.bind({
@@ -698,7 +1298,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     subject: 'PDF',
     multiple: true,
     onFiles(files, detail) {
-      addPdfFiles(files, detail.sourceLabel);
+      addPdfFiles(files, detail.sourceLabel, detail.fileEntries);
     },
   });
 

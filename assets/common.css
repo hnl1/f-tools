@@ -191,8 +191,8 @@ body.tool-page .button:not(.icon-btn) {
   line-height: 1.5;
 }
 
-body.tool-page button:hover,
-body.tool-page .button:hover {
+body.tool-page button:not(:disabled):hover,
+body.tool-page .button:not(:disabled):hover {
   background: var(--button-hover);
   border-color: var(--accent);
 }
@@ -203,7 +203,7 @@ body.tool-page .button.primary {
   color: #fff;
 }
 
-body.tool-page .button.primary:hover {
+body.tool-page .button.primary:not(:disabled):hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
 }
@@ -222,12 +222,6 @@ body.tool-page .button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   box-shadow: none;
-}
-
-body.tool-page button:disabled:hover,
-body.tool-page .button:disabled:hover {
-  background: var(--button-bg);
-  border-color: var(--button-border);
 }
 
 body.tool-page input[type="file"],
@@ -378,36 +372,6 @@ body.tool-page .file-drop-zone.is-collapsed {
   border: 0;
   pointer-events: none;
   box-shadow: none;
-}
-
-.file-input-trigger.is-newly-visible {
-  animation: fileInputTriggerIntro 1.6s ease-out;
-}
-
-@keyframes fileInputTriggerIntro {
-  0% {
-    transform: translateY(-6px) scale(0.96);
-    box-shadow: 0 0 0 0 rgba(74, 158, 255, 0.45);
-  }
-  35% {
-    transform: translateY(0) scale(1.04);
-    box-shadow: 0 0 0 8px rgba(74, 158, 255, 0.18);
-    border-color: var(--accent);
-  }
-  70% {
-    transform: translateY(0) scale(1);
-    box-shadow: 0 0 0 14px rgba(74, 158, 255, 0);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    box-shadow: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .file-input-trigger.is-newly-visible {
-    animation: none;
-  }
 }
 
 .file-input-trigger-tooltip {

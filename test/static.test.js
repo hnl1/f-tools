@@ -145,10 +145,14 @@ test("pdf to image supports multi PDF queue actions", () => {
   assert.match(html, /<input[^>]+id="pdf-file"[^>]+\bmultiple\b/, "pdf-to-image file input should accept multiple PDFs");
   assert.match(html, /\bmultiple:\s*true/, "pdf-to-image shared drop zone should accept multiple PDFs");
   assert.match(html, /id="generate-all-btn"/, "pdf-to-image should include global generate button");
+  assert.doesNotMatch(html, /id="stop-all-btn"/, "pdf-to-image should combine stop into the generate button");
   assert.match(html, /id="download-all-btn"/, "pdf-to-image should include global download-all button");
-  assert.match(html, /id="add-pdf-btn"[^>]*hidden[^>]*>\s*添加 PDF\s*</, "pdf-to-image should move the add PDF action into the header after files are selected");
-  assert.match(html, /async function generateAll\(\)/, "pdf-to-image should generate all items sequentially");
-  assert.match(html, /for \(let index = 0; index < items\.length; index \+= 1\)/, "pdf-to-image should queue generation one PDF at a time");
+  assert.doesNotMatch(html, /id="concurrency-select"/, "pdf-to-image should not expose concurrency selection");
+  assert.match(html, /id="add-pdf-btn"[^>]*>\s*添加 PDF\s*</, "pdf-to-image should keep the add PDF action in the header");
+  assert.doesNotMatch(html, /id="add-pdf-btn"[^>]*hidden/, "pdf-to-image add PDF action should stay visible");
+  assert.match(html, /id="download-all-btn"[\s\S]*id="add-pdf-btn"/, "pdf-to-image should keep add PDF near the clear action");
+  assert.match(html, /async function generateAll\(\)/, "pdf-to-image should generate all items in bulk");
+  assert.match(html, /GENERATE_ALL_CONCURRENCY = 4/, "pdf-to-image should use fixed 4-way concurrency");
   assert.match(html, /generateBtn\.textContent = '转换'/, "pdf-to-image should include per-item convert action");
   assert.match(html, /downloadBtn\.textContent = '下载'/, "pdf-to-image should include per-item download action");
   assert.match(html, /compareBtn\.textContent = '比较'/, "pdf-to-image should include per-item compare action");
@@ -161,6 +165,79 @@ test("pdf to image supports multi PDF queue actions", () => {
   assert.match(html, /storeForCompare/, "pdf-to-image should store generated PDFs for compare");
   assert.match(html, /pdf-compare\.html\?from=pdf-to-image\.html&transfer=/, "pdf-to-image should link generated output into compare");
   assert.match(html, /-images\.pdf/, "pdf-to-image should use an images output filename suffix");
+});
+
+test("pdf to image can stop bulk conversion", () => {
+  const html = read("tools/pdf-to-image.html");
+
+  assert.match(html, /let cancelRequested = false/);
+  assert.match(html, /function requestStopGenerating\(\)/);
+  assert.match(html, /generateAllBtn\.textContent = isGenerating \? '停止' : '转换'/);
+  assert.match(html, /if \(isGenerating\) \{\s*requestStopGenerating\(\);/);
+  assert.match(html, /function throwIfCancelled\(shouldCancel\)/);
+  assert.match(html, /convertPdfToImagePdf\(item\.file,[\s\S]*\(\) => cancelRequested\)/);
+  assert.match(html, /title: cancelRequested \? '已停止'/);
+  assert.match(html, /未完成的 PDF 可稍后继续转换/);
+});
+
+test("pdf to image displays directory paths for folder imports", () => {
+  const html = read("tools/pdf-to-image.html");
+
+  assert.match(html, /function getDisplayPathSeparator\(\)/);
+  assert.match(html, /function getPdfDisplayName\(file, fileEntry\)/);
+  assert.match(html, /function getPdfOutputPath\(file, fileEntry, outputName\)/);
+  assert.match(html, /relativePath\.split\('\/'\)\.filter\(Boolean\)\.join\(getDisplayPathSeparator\(\)\)/);
+  assert.match(html, /addPdfFiles\(files, detail\.sourceLabel, detail\.fileEntries\)/);
+});
+
+test("pdf to image zips multiple generated downloads with paths", () => {
+  const html = read("tools/pdf-to-image.html");
+
+  assert.match(html, /async function createZipBlob\(entries\)/);
+  assert.match(html, /async function downloadAllGenerated\(\)/);
+  assert.match(html, /generatedItems\.length === 1/);
+  assert.match(html, /downloadBlob\(item\.outputBlob, item\.outputName\)/);
+  assert.match(html, /path:\s*item\.outputPath \|\| item\.outputName/);
+  assert.match(html, /pdf-to-image-results\.zip/);
+});
+
+test("pdf to image shows bulk conversion progress", () => {
+  const html = read("tools/pdf-to-image.html");
+
+  assert.match(html, /id="bulk-progress"/);
+  assert.match(html, /id="bulk-progress-hint"/);
+  assert.match(html, /id="bulk-progress-close"/);
+  assert.match(html, /id="bulk-progress-header-summary"/);
+  assert.match(html, /#bulk-progress-header-summary\s*\{[\s\S]*left:\s*50%;/);
+  assert.match(html, /已处理 0 \/ 0/);
+  assert.match(html, /class="bulk-progress-title-row"/);
+  assert.match(html, /\.bulk-progress\s*\{[\s\S]*position:\s*fixed;/);
+  assert.match(html, /\.bulk-progress\s*\{[\s\S]*top:\s*72px;/);
+  assert.match(html, /\.bulk-progress-close\s*\{[\s\S]*background:\s*transparent;/);
+  assert.match(html, /\.bulk-progress\.is-opening\s*\{/);
+  assert.match(html, /@keyframes bulkProgressOpen/);
+  assert.match(html, /浏览器可能降低处理速度/);
+  assert.match(html, /bulkProgressHint\.hidden = state\.title !== '转换中'/);
+  assert.match(html, /let isBulkProgressDismissed = false/);
+  assert.match(html, /function showBulkProgress\(animate = true\)/);
+  assert.match(html, /function closeBulkProgress\(\)/);
+  assert.match(html, /function updateHeaderProgressSummary\(\)/);
+  assert.match(html, /function startBulkProgressDrag\(event\)/);
+  assert.match(html, /bulkProgress\.classList\.add\('is-opening'\)/);
+  assert.match(html, /bulkProgressClose\.addEventListener\('click', closeBulkProgress\)/);
+  assert.match(html, /bulkProgressHeaderSummary\.addEventListener\('click', showBulkProgress\)/);
+  assert.match(html, /bulkProgressHead\.addEventListener\('pointerdown', startBulkProgressDrag\)/);
+  assert.match(html, /function formatDuration\(milliseconds\)/);
+  assert.doesNotMatch(html, /function formatClockTime\(timestamp\)/);
+  assert.match(html, /function updateBulkProgress\(state\)/);
+  assert.match(html, /已完成 \$\{completed\} 个，失败 \$\{failed\} 个/);
+  assert.match(html, /已完成 \$\{completed\} 个/);
+  assert.match(html, /耗时 \$\{formatDuration\(elapsed\)\}/);
+  assert.match(html, /预计还需 \$\{formatDuration\(remaining\)\}/);
+  assert.match(html, /平均 \$\{speedText\}/);
+  assert.match(html, /bulkProgressBar\.style\.width = `\$\{percent\}%`/);
+  assert.match(html, /const startedAt = Date\.now\(\)/);
+  assert.match(html, /title: cancelRequested \? '已停止' : \(failedCount \? '转换完成（有失败）' : '转换完成'\)/);
 });
 
 test("pdf to image keeps global controls in the sticky header", () => {
@@ -281,6 +358,10 @@ test("shared file input script supports directory picking", () => {
   assert.match(script, /webkitdirectory/);
   assert.match(script, /createDirectoryInput/);
   assert.match(script, /createDropActions/);
+  assert.match(script, /createFileEntry/);
+  assert.match(script, /buildFileTree/);
+  assert.match(script, /fileEntries:\s*entries/);
+  assert.match(script, /allFileEntries:\s*incomingEntries/);
   assert.match(script, /acceptFiles\(directoryInput\.files, 'folder'\)/);
   assert.match(script, /textContent = '选择文件夹'/);
   assert.match(script, /textContent = '添加文件夹'/);
