@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图标预览</title>
+<script src="../assets/theme-toggle.js"></script>
+<script src="../assets/home-link.js"></script>
+<script src="../assets/tool-header.js"></script>
+<style>
+  .icon-gallery {
+    width: min(960px, calc(100vw - 32px));
+    margin: 0 auto;
+    padding: 32px 0 48px;
+  }
+
+  .icon-gallery-intro {
+    margin: 0 0 18px;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+  }
+
+  .icon-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--ft-radius-lg);
+    box-shadow: var(--shadow);
+  }
+
+  .icon-preview {
+    width: 48px;
+    height: 48px;
+    color: var(--text);
+  }
+
+  .icon-preview::before {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: currentColor;
+    -webkit-mask: var(--icon-url) center / contain no-repeat;
+    mask: var(--icon-url) center / contain no-repeat;
+  }
+
+  .icon-preview.home {
+    --icon-url: var(--icon-home);
+  }
+
+  .icon-preview.computer {
+    --icon-url: var(--icon-computer);
+  }
+
+  .icon-preview.sun {
+    --icon-url: var(--icon-sun);
+  }
+
+  .icon-preview.moon {
+    --icon-url: var(--icon-moon);
+  }
+
+  .icon-preview.trash {
+    --icon-url: var(--icon-trash);
+  }
+
+  .icon-name {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .icon-token {
+    color: var(--text-faint);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+</style>
+<link rel="stylesheet" href="../assets/common.css">
+</head>
+<body class="tool-page">
+<main>
+  <section class="icon-gallery">
+    <p class="icon-gallery-intro">这个页面不放到首页入口，只用于直接访问时检查共享图标。</p>
+    <div class="icon-grid" aria-label="共享图标预览">
+      <div class="icon-card">
+        <span class="icon-preview home" aria-hidden="true"></span>
+        <span class="icon-name">房子</span>
+        <span class="icon-token">--icon-home</span>
+      </div>
+      <div class="icon-card">
+        <span class="icon-preview computer" aria-hidden="true"></span>
+        <span class="icon-name">电脑</span>
+        <span class="icon-token">--icon-computer</span>
+      </div>
+      <div class="icon-card">
+        <span class="icon-preview sun" aria-hidden="true"></span>
+        <span class="icon-name">太阳</span>
+        <span class="icon-token">--icon-sun</span>
+      </div>
+      <div class="icon-card">
+        <span class="icon-preview moon" aria-hidden="true"></span>
+        <span class="icon-name">月亮</span>
+        <span class="icon-token">--icon-moon</span>
+      </div>
+      <div class="icon-card">
+        <span class="icon-preview trash" aria-hidden="true"></span>
+        <span class="icon-name">垃圾桶</span>
+        <span class="icon-token">--icon-trash</span>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  ToolHeader.mount({ title: '图标预览' });
+})();
+</script>
+</body>
+</html>

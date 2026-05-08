@@ -7,8 +7,9 @@
     const btn = document.createElement('button');
     btn.id = 'clear-btn';
     btn.type = 'button';
-    btn.className = 'danger';
-    btn.textContent = label;
+    btn.className = 'icon-action-btn trash';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
     btn.disabled = true;
     btn.addEventListener('click', () => {
       if (btn.disabled) return;

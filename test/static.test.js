@@ -12,6 +12,12 @@ const toolPages = [
   "tools/pdf-compare.html",
   "tools/pdf-to-image.html",
 ];
+const hiddenPages = [
+  "tools/icons.html",
+];
+const secondaryPages = [
+  "index2.html",
+];
 const fileInputPages = [
   "tools/video-compare.html",
   "tools/image-compare.html",
@@ -24,7 +30,7 @@ const fileInputSupportText = {
   "tools/pdf-compare.html": "支持 PDF 文件",
   "tools/pdf-to-image.html": "支持 PDF 文件",
 };
-const pages = ["index.html", ...toolPages];
+const pages = ["index.html", ...secondaryPages, ...toolPages, ...hiddenPages];
 
 function read(relativePath) {
   return readFileSync(path.join(root, relativePath), "utf8");
@@ -38,7 +44,15 @@ function resolveLocalReference(fromPage, value) {
 test("GitHub Pages entry and moved tool pages exist", () => {
   assert.ok(existsSync(path.join(root, "index.html")), "index.html should stay at repo root");
 
+  for (const page of secondaryPages) {
+    assert.ok(existsSync(path.join(root, page)), `${page} should exist`);
+  }
+
   for (const page of toolPages) {
+    assert.ok(existsSync(path.join(root, page)), `${page} should exist`);
+  }
+
+  for (const page of hiddenPages) {
     assert.ok(existsSync(path.join(root, page)), `${page} should exist`);
   }
 
@@ -52,6 +66,22 @@ test("home page links to every tool under tools/", () => {
 
   for (const page of toolPages) {
     assert.match(html, new RegExp(`href="${page}"`), `index.html should link to ${page}`);
+  }
+
+  for (const page of hiddenPages) {
+    assert.doesNotMatch(html, new RegExp(`href="${page}"`), `index.html should not link to hidden page ${page}`);
+  }
+
+  for (const page of secondaryPages) {
+    assert.doesNotMatch(html, new RegExp(`href="${page}"`), `index.html should not link to secondary page ${page}`);
+  }
+});
+
+test("secondary entry links to hidden pages", () => {
+  const html = read("index2.html");
+
+  for (const page of hiddenPages) {
+    assert.match(html, new RegExp(`href="${page}"`), `index2.html should link to hidden page ${page}`);
   }
 });
 
@@ -325,6 +355,22 @@ test("shared tool header style is sticky", () => {
 
   assert.match(css, /\.tool-header\s*\{[\s\S]*position:\s*sticky;/);
   assert.match(css, /\.tool-header\s*\{[\s\S]*top:\s*0;/);
+});
+
+test("shared icon definitions live in the icon stylesheet", () => {
+  const commonCss = read("assets/common.css");
+  const iconCss = read("assets/icons.css");
+  const iconPage = read("tools/icons.html");
+
+  assert.match(commonCss, /@import url\("\.\/icons\.css"\);/);
+  assert.doesNotMatch(commonCss, /--icon-(?:home|computer|sun|moon|trash):\s*url\(/);
+
+  for (const icon of ["home", "computer", "sun", "moon", "trash"]) {
+    assert.match(iconCss, new RegExp(`--icon-${icon}:\\s*url\\(`));
+    assert.match(commonCss, new RegExp(`--icon-url:\\s*var\\(--icon-${icon}\\)`));
+    assert.match(iconPage, new RegExp(`--icon-url:\\s*var\\(--icon-${icon}\\)`));
+    assert.match(iconPage, new RegExp(`--icon-${icon}`));
+  }
 });
 
 test("shared file drop zone style exists", () => {
