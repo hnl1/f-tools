@@ -1,401 +1,869 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <title>视频对比</title>
-    <script src="../assets/theme-toggle.js"></script>
-    <script src="../assets/home-link.js"></script>
-    <script src="../assets/clear-button.js"></script>
-    <script src="../assets/tool-header.js"></script>
-    <style>
-      :root[data-theme="dark"] {
-        color-scheme: dark;
-        --bg: #111;
-        --bg-drop: #142033;
-        --text: #eee;
-        --text-muted: #888;
-        --text-faint: #666;
-        --surface: #1a1a1a;
-        --surface-2: #222;
-        --surface-hover: #2a2a2a;
-        --surface-hover-2: #3a3a3a;
-        --border: #333;
-        --border-strong: #444;
-        --accent: #4aa3ff;
-        --danger: #ff8a8a;
-        --danger-border: #663030;
-        --danger-hover-bg: #3a2020;
-      }
-      :root[data-theme="light"] {
-        color-scheme: light;
-        --bg: #f5f6f8;
-        --bg-drop: #e0ecff;
-        --text: #1f2937;
-        --text-muted: #6b7280;
-        --text-faint: #9ca3af;
-        --surface: #ffffff;
-        --surface-2: #f9fafb;
-        --surface-hover: #f3f4f6;
-        --surface-hover-2: #e5e7eb;
-        --border: #e5e7eb;
-        --border-strong: #d1d5db;
-        --accent: #2563eb;
-        --danger: #dc2626;
-        --danger-border: #fca5a5;
-        --danger-hover-bg: #fee2e2;
-      }
-      * {
-        box-sizing: border-box;
-      }
-      html,
-      body {
-        height: 100%;
-      }
-      body {
-        margin: 0;
-        padding: 0;
-        background: var(--bg);
-        color: var(--text);
-        font: 14px/1.4 -apple-system, "PingFang SC", system-ui, sans-serif;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-      }
-      body.dragging {
-        outline: 3px dashed var(--accent);
-        outline-offset: -8px;
-        background: var(--bg-drop);
-      }
-      .hint {
-        color: var(--text-muted);
-        font-size: 12px;
-      }
-      button {
-        background: var(--surface-hover);
-        color: var(--text);
-        border: 1px solid var(--border-strong);
-        padding: 3px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-      }
-      button:hover {
-        background: var(--surface-hover-2);
-      }
-      button.danger {
-        border-color: var(--danger-border);
-        color: var(--danger);
-      }
-      .grid {
-        display: grid;
-        gap: 12px;
-        flex: 1;
-        min-height: 0;
-        margin: 12px 16px 16px;
-      }
-      .cell {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-        min-height: 0;
-      }
-      .cell .title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        font-weight: 500;
-        background: var(--surface-2);
-        border-bottom: 1px solid var(--border);
-        font-size: 13px;
-        flex-shrink: 0;
-        cursor: grab;
-        user-select: none;
-      }
-      .cell .title:active {
-        cursor: grabbing;
-      }
-      .cell.dragging-cell {
-        opacity: 0.4;
-      }
-      .cell.drag-over-left {
-        box-shadow: -3px 0 0 0 var(--accent);
-      }
-      .cell.drag-over-right {
-        box-shadow: 3px 0 0 0 var(--accent);
-      }
-      .cell .title .handle {
-        color: var(--text-faint);
-        font-size: 14px;
-        line-height: 1;
-      }
-      .cell .title .name {
-        flex: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .cell .title .remove {
-        cursor: pointer;
-        color: var(--text-muted);
-        padding: 0 4px;
-        border-radius: 3px;
-      }
-      .cell .title .remove:hover {
-        background: var(--danger-hover-bg);
-        color: var(--danger);
-      }
-      video {
-        flex: 1;
-        min-height: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        background: #000;
-        display: block;
-      }
-      #drop-hint {
-        flex: 1 1 auto;
-        margin: 40px;
-        padding: 60px;
-        text-align: center;
-        font-size: 18px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-      }
-      .empty {
-        padding: 80px 24px;
-        text-align: center;
-        color: var(--text-faint);
-        border: 2px dashed var(--border);
-        border-radius: 8px;
-        font-size: 15px;
-      }
-    </style>
-    <link rel="stylesheet" href="../assets/common.css">
-  </head>
-  <body class="tool-page">
-    <div id="header-controls" hidden>
-      <button id="sync-toggle">同时播放</button>
-      <button id="sync-reset">回到 0s</button>
-      <button id="add-btn" type="button">添加视频</button>
-      <input type="file" id="file-input" class="visually-hidden-file" accept="video/*,.mp4,.mov,.webm,.mkv,.m4v" multiple aria-label="选择视频文件">
-    </div>
+<head>
+<meta charset="UTF-8">
+<title>视频对比</title>
+<script src="../assets/theme-toggle.js"></script>
+<script src="../assets/home-link.js"></script>
+<script src="../assets/clear-button.js"></script>
+<script src="../assets/tool-header.js"></script>
+<style>
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1e1e1e;
+    --bg-drop: #142033;
+    --text: #ddd;
+    --text-muted: #aaa;
+    --text-faint: #888;
+    --text-fainter: #666;
+    --header-bg: #252525;
+    --border: #333;
+    --button-bg: #3a3a3a;
+    --button-border: #555;
+    --button-hover: #4a4a4a;
+    --resizer-bg: #2a2a2a;
+    --resizer-handle: #555;
+    --accent: #4a9eff;
+    --accent-tint: rgba(74, 158, 255, 0.05);
+    --label-bg: rgba(0, 0, 0, 0.7);
+    --label-text: #fff;
+    --remove-bg: rgba(0, 0, 0, 0.65);
+    --progress-bg: #2a2a2a;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #fafafa;
+    --bg-drop: #e0ecff;
+    --text: #1f2937;
+    --text-muted: #4b5563;
+    --text-faint: #6b7280;
+    --text-fainter: #9ca3af;
+    --header-bg: #ffffff;
+    --border: #e5e7eb;
+    --button-bg: #ffffff;
+    --button-border: #d1d5db;
+    --button-hover: #f3f4f6;
+    --resizer-bg: #f3f4f6;
+    --resizer-handle: #cbd5e1;
+    --accent: #2563eb;
+    --accent-tint: rgba(37, 99, 235, 0.06);
+    --label-bg: rgba(255, 255, 255, 0.85);
+    --label-text: #1f2937;
+    --remove-bg: rgba(0, 0, 0, 0.55);
+    --progress-bg: #f3f4f6;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang SC", sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+  body.dragging {
+    outline: 3px dashed var(--accent);
+    outline-offset: -8px;
+    background: var(--bg-drop);
+  }
+  .tool-header label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+  .tool-header label[hidden] { display: none; }
+  .tool-header input[type="range"] {
+    width: 120px;
+  }
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+    flex: 0 0 auto;
+  }
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+  }
+  .switch .slider {
+    position: absolute;
+    inset: 0;
+    background: var(--button-border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .switch .slider::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    top: 2px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    transition: transform 0.15s;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(14px); }
+  .switch input:focus-visible + .slider { box-shadow: 0 0 0 2px var(--accent-tint); }
 
-    <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="video-drop-title">
-      <div class="file-drop-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 4v12"></path>
-          <path d="m7 9 5-5 5 5"></path>
-          <path d="M5 18v2h14v-2"></path>
-        </svg>
-      </div>
-      <div>
-        <div id="video-drop-title" class="file-drop-title"></div>
-      </div>
-      <div id="video-drop-status" class="file-drop-status" hidden></div>
-    </div>
+  #drop-hint {
+    flex: 1 1 auto;
+    margin: 40px;
+    padding: 60px;
+    text-align: center;
+    font-size: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  #grid {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    gap: 0;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: stretch;
+    background: var(--bg);
+  }
+  .tile {
+    position: relative;
+    flex: 0 0 auto;
+    height: 100%;
+    overflow: hidden;
+    cursor: grab;
+    transition: opacity 0.12s;
+  }
+  body.zooming .tile { cursor: crosshair; }
+  .tile:active { cursor: grabbing; }
+  .tile.drag-source { opacity: 0.4; }
+  .tile.drop-before { box-shadow: inset 3px 0 0 0 var(--accent); }
+  .tile.drop-after  { box-shadow: inset -3px 0 0 0 var(--accent); }
+  .tile video.base {
+    display: block;
+    width: auto;
+    height: 100%;
+    max-width: none;
+    background: transparent;
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+  .tile .label {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: var(--label-bg);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--label-text);
+    pointer-events: none;
+    max-width: calc(100% - 40px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    z-index: 2;
+  }
+  .tile .remove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--remove-bg);
+    color: #fff;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 3;
+  }
+  .tile:hover .remove { opacity: 1; }
+  .tile .lens-rect {
+    position: absolute;
+    border: 1.5px solid rgba(255, 220, 0, 0.9);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
+    pointer-events: none;
+    display: none;
+    z-index: 2;
+  }
 
-    <div id="grid" class="grid"></div>
+  /* Shared progress bar */
+  #shared-progress {
+    flex: 0 0 auto;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: var(--progress-bg);
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  #shared-progress.active { display: flex; }
+  #shared-progress .time { flex: 0 0 auto; min-width: 44px; text-align: center; }
+  #shared-progress button {
+    flex: 0 0 auto;
+    background: var(--button-bg);
+    color: var(--text);
+    border: 1px solid var(--button-border);
+    padding: 2px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  #shared-progress button:hover { background: var(--button-hover); }
+  #shared-progress input[type="range"] {
+    flex: 1 1 auto;
+    width: auto;
+    margin: 0;
+    accent-color: var(--accent);
+  }
 
-    <script src="../assets/file-input.js"></script>
-    <script>
-      const headerControlsHost = document.getElementById("header-controls");
-      const { clearBtn } = ToolHeader.mount({
-        title: "视频对比",
-        controls: Array.from(headerControlsHost.children),
-        clearButton: { onClear: () => clearAll() },
+  #zoom-strip {
+    flex: 0 0 auto;
+    background: var(--bg);
+    padding: 0;
+    display: none;
+    gap: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+  #zoom-strip.active { display: flex; }
+  #zoom-resizer {
+    flex: 0 0 8px;
+    cursor: ns-resize;
+    background: var(--resizer-bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    display: none;
+    position: relative;
+  }
+  #zoom-resizer.active { display: block; }
+  #zoom-resizer::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--resizer-handle);
+    transition: background 0.12s;
+  }
+  #zoom-resizer:hover::before,
+  body.resizing-zoom #zoom-resizer::before { background: var(--accent); }
+  body.resizing-zoom { cursor: ns-resize; user-select: none; }
+  .zoom-panel {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+  .zoom-panel canvas {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    display: block;
+  }
+  .zoom-panel .zlabel {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    background: var(--label-bg);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--label-text);
+    pointer-events: none;
+  }
+</style>
+<link rel="stylesheet" href="../assets/common.css">
+</head>
+<body class="tool-page">
+<div id="header-controls" hidden>
+  <label title="开启后,鼠标悬停视频时下方显示放大画面">
+    放大
+    <span class="switch">
+      <input type="checkbox" id="zoom-toggle">
+      <span class="slider"></span>
+    </span>
+  </label>
+  <label id="region-frac-label" hidden title="取样区域占视频短边的比例(与各视频分辨率无关,对应内容上的同一块区域)">
+    取样区域
+    <input type="range" id="region-frac" min="5" max="50" step="5" value="25">
+    <span id="region-frac-value">25%</span>
+  </label>
+  <button id="add-btn" type="button">添加视频</button>
+  <input type="file" id="file-input" class="visually-hidden-file" accept="video/*,.mp4,.mov,.webm,.mkv,.m4v" multiple aria-label="选择视频文件">
+</div>
+
+<div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="video-drop-title">
+  <div class="file-drop-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 4v12"></path>
+      <path d="m7 9 5-5 5 5"></path>
+      <path d="M5 18v2h14v-2"></path>
+    </svg>
+  </div>
+  <div>
+    <div id="video-drop-title" class="file-drop-title"></div>
+  </div>
+  <div id="video-drop-status" class="file-drop-status" hidden></div>
+</div>
+
+<div id="grid" style="display:none"></div>
+
+<div id="shared-progress">
+  <button id="sync-toggle" type="button" title="同时播放/暂停所有视频">▶</button>
+  <button id="sync-reset" type="button" title="所有视频回到 0s">⤺</button>
+  <span id="time-current" class="time">0:00</span>
+  <input type="range" id="progress-slider" min="0" max="1000" step="1" value="0" aria-label="共用进度">
+  <span id="time-total" class="time">0:00</span>
+</div>
+
+<div id="zoom-resizer" title="拖动调整放大面板大小"></div>
+<div id="zoom-strip"></div>
+
+<script src="../assets/file-input.js"></script>
+<script>
+(() => {
+  const headerControlsHost = document.getElementById('header-controls');
+  const { clearBtn } = ToolHeader.mount({
+    title: '视频对比',
+    controls: Array.from(headerControlsHost.children),
+    clearButton: { onClear: () => clearAll() },
+  });
+  headerControlsHost.remove();
+
+  const grid = document.getElementById('grid');
+  const dropHint = document.getElementById('drop-hint');
+  const zoomStrip = document.getElementById('zoom-strip');
+  const zoomResizer = document.getElementById('zoom-resizer');
+  const zoomToggleBtn = document.getElementById('zoom-toggle');
+  const regionFracLabel = document.getElementById('region-frac-label');
+  const regionFracInput = document.getElementById('region-frac');
+  const regionFracValueLabel = document.getElementById('region-frac-value');
+  const addBtn = document.getElementById('add-btn');
+  const fileInput = document.getElementById('file-input');
+  const dropStatus = document.getElementById('video-drop-status');
+  const toggleBtn = document.getElementById('sync-toggle');
+  const resetBtn = document.getElementById('sync-reset');
+  const sharedProgress = document.getElementById('shared-progress');
+  const progressSlider = document.getElementById('progress-slider');
+  const timeCurrentEl = document.getElementById('time-current');
+  const timeTotalEl = document.getElementById('time-total');
+  let fileDropZone = null;
+
+  let items = [];
+  let regionFrac = parseFloat(regionFracInput.value) / 100;
+  let panelPx = 360;
+  let zoomEnabled = false;
+
+  regionFracInput.addEventListener('input', () => {
+    regionFrac = parseFloat(regionFracInput.value) / 100;
+    regionFracValueLabel.textContent = regionFracInput.value + '%';
+    sizeZoomPanels();
+    if (curU != null) updateAllLenses();
+  });
+
+  zoomToggleBtn.addEventListener('change', () => {
+    setZoomEnabled(zoomToggleBtn.checked);
+  });
+
+  function setZoomEnabled(on) {
+    zoomEnabled = on;
+    zoomToggleBtn.checked = on;
+    regionFracLabel.hidden = !on;
+    document.body.classList.toggle('zooming', on);
+    if (!on) {
+      zoomStrip.classList.remove('active');
+      zoomResizer.classList.remove('active');
+      onTileLeave();
+    } else if (items.length) {
+      buildZoomPanels();
+      zoomStrip.classList.add('active');
+      zoomResizer.classList.add('active');
+    }
+  }
+
+  zoomResizer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    document.body.classList.add('resizing-zoom');
+    const startY = e.clientY;
+    const startPx = panelPx;
+    const onMove = (ev) => {
+      const dy = startY - ev.clientY;
+      let p = Math.round(startPx + dy);
+      if (p < 80) p = 80;
+      const maxP = Math.max(120, window.innerHeight - 120);
+      if (p > maxP) p = maxP;
+      panelPx = p;
+      sizeZoomPanels();
+      if (curU != null) updateAllLenses();
+    };
+    const onUp = () => {
+      document.body.classList.remove('resizing-zoom');
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
+
+  function updateClearBtn() {
+    clearBtn.setCount(items.length);
+  }
+  updateClearBtn();
+
+  fileDropZone = FileInputDropZone.bind({
+    zone: dropHint,
+    input: fileInput,
+    triggerElement: dropHint,
+    triggerButton: addBtn,
+    status: dropStatus,
+    subject: '视频',
+    onFiles(files) {
+      handleFiles(files);
+    },
+  });
+
+  function clearAll() {
+    items.forEach(it => URL.revokeObjectURL(it.url));
+    items = [];
+    grid.innerHTML = '';
+    grid.style.display = 'none';
+    zoomStrip.innerHTML = '';
+    zoomStrip.classList.remove('active');
+    zoomResizer.classList.remove('active');
+    sharedProgress.classList.remove('active');
+    if (fileDropZone) fileDropZone.clear();
+    updateClearBtn();
+    refreshToggleLabel();
+    updateSharedProgress(true);
+  }
+
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList).filter(
+      (f) => (f.type && f.type.startsWith('video/')) || /\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name),
+    );
+    if (files.length === 0) return;
+    grid.style.display = '';
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    for (const f of files) {
+      await addVideo(f.name, f);
+    }
+    if (zoomEnabled) {
+      buildZoomPanels();
+      zoomStrip.classList.add('active');
+      zoomResizer.classList.add('active');
+    }
+    if (fileDropZone) fileDropZone.setHasItems(items.length > 0);
+    updateClearBtn();
+    refreshToggleLabel();
+    refreshSharedProgressVisibility();
+  }
+
+  function addVideo(name, blob) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(blob);
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.draggable = true;
+
+      const video = document.createElement('video');
+      video.className = 'base';
+      video.src = url;
+      video.preload = 'metadata';
+      video.playsInline = true;
+      tile.appendChild(video);
+
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent = name;
+      tile.appendChild(label);
+
+      const lens = document.createElement('div');
+      lens.className = 'lens-rect';
+      tile.appendChild(lens);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove';
+      removeBtn.textContent = '×';
+      removeBtn.title = '移除';
+      removeBtn.draggable = false;
+      removeBtn.addEventListener('mousedown', (ev) => ev.stopPropagation());
+      removeBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        removeItem(item);
       });
-      headerControlsHost.remove();
+      tile.appendChild(removeBtn);
 
-      const grid = document.getElementById("grid");
-      const dropHint = document.getElementById("drop-hint");
-      const fileInput = document.getElementById("file-input");
-      const addBtn = document.getElementById("add-btn");
-      const dropStatus = document.getElementById("video-drop-status");
-      const items = [];
-      let fileDropZone = null;
+      grid.appendChild(tile);
 
-      function clearAll() {
-        items.forEach((it) => URL.revokeObjectURL(it.url));
-        items.length = 0;
-        render();
-      }
+      const item = { name, url, blob, video, tile, lens, label };
+      items.push(item);
 
-      function render() {
-        grid.innerHTML = "";
-        clearBtn.setCount(items.length);
-        if (items.length === 0) {
-          if (fileDropZone) fileDropZone.clear();
-          grid.style.display = "none";
-          grid.style.gridTemplateColumns = "1fr";
-          return;
-        }
-        if (fileDropZone) fileDropZone.setHasItems(true);
-        grid.style.display = "";
-        grid.style.gridTemplateColumns = `repeat(${items.length}, minmax(0, 1fr))`;
-        items.forEach((item, idx) => {
-          const cell = document.createElement("div");
-          cell.className = "cell";
-          cell.dataset.idx = String(idx);
+      const onMeta = () => {
+        label.textContent = `${name}  ·  ${video.videoWidth}×${video.videoHeight}`;
+        sizeZoomPanels();
+        refreshSharedProgressVisibility();
+        resolve();
+      };
+      if (video.readyState >= 1 && video.videoWidth) onMeta();
+      else video.addEventListener('loadedmetadata', onMeta, { once: true });
+      video.addEventListener('error', () => resolve(), { once: true });
 
-          const title = document.createElement("div");
-          title.className = "title";
-          title.draggable = true;
-          title.title = "拖动调整顺序";
-
-          const handle = document.createElement("span");
-          handle.className = "handle";
-          handle.textContent = "⋮⋮";
-
-          const name = document.createElement("span");
-          name.className = "name";
-          name.textContent = item.name;
-          name.title = item.name;
-
-          const remove = document.createElement("span");
-          remove.className = "remove";
-          remove.textContent = "✕";
-          remove.title = "移除";
-          remove.addEventListener("click", () => {
-            URL.revokeObjectURL(item.url);
-            items.splice(idx, 1);
-            render();
-          });
-
-          title.appendChild(handle);
-          title.appendChild(name);
-          title.appendChild(remove);
-
-          title.addEventListener("dragstart", (e) => {
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData(CELL_MIME, String(idx));
-            cell.classList.add("dragging-cell");
-          });
-          title.addEventListener("dragend", () => {
-            cell.classList.remove("dragging-cell");
-            clearDropMarkers();
-          });
-
-          cell.addEventListener("dragover", (e) => {
-            if (!isCellDrag(e)) return;
-            e.preventDefault();
-            e.stopPropagation();
-            e.dataTransfer.dropEffect = "move";
-            const rect = cell.getBoundingClientRect();
-            const before = e.clientX < rect.left + rect.width / 2;
-            clearDropMarkers();
-            cell.classList.add(before ? "drag-over-left" : "drag-over-right");
-          });
-          cell.addEventListener("dragleave", (e) => {
-            if (e.target === cell) {
-              cell.classList.remove("drag-over-left", "drag-over-right");
-            }
-          });
-          cell.addEventListener("drop", (e) => {
-            if (!isCellDrag(e)) return;
-            e.preventDefault();
-            e.stopPropagation();
-            const from = Number(e.dataTransfer.getData(CELL_MIME));
-            const rect = cell.getBoundingClientRect();
-            const before = e.clientX < rect.left + rect.width / 2;
-            let to = idx + (before ? 0 : 1);
-            clearDropMarkers();
-            if (Number.isNaN(from) || from === to || from + 1 === to) return;
-            const [moved] = items.splice(from, 1);
-            if (from < to) to -= 1;
-            items.splice(to, 0, moved);
-            render();
-          });
-
-          const video = document.createElement("video");
-          video.controls = true;
-          video.preload = "metadata";
-          video.src = item.url;
-
-          cell.appendChild(title);
-          cell.appendChild(video);
-          grid.appendChild(cell);
-        });
-      }
-
-      const CELL_MIME = "application/x-cell-index";
-
-      function isCellDrag(e) {
-        return e.dataTransfer && Array.from(e.dataTransfer.types).includes(CELL_MIME);
-      }
-
-      function clearDropMarkers() {
-        document
-          .querySelectorAll(".drag-over-left, .drag-over-right")
-          .forEach((el) => el.classList.remove("drag-over-left", "drag-over-right"));
-      }
-
-      function sortItems() {
-        items.sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
-        );
-      }
-
-      function addFiles(fileList) {
-        const files = Array.from(fileList).filter(
-          (f) => f.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|m4v)$/i.test(f.name),
-        );
-        if (files.length === 0) return;
-        files.forEach((f) => {
-          items.push({ name: f.name, url: URL.createObjectURL(f) });
-        });
-        sortItems();
-        render();
-      }
-
-      fileDropZone = FileInputDropZone.bind({
-        zone: dropHint,
-        input: fileInput,
-        triggerElement: dropHint,
-        triggerButton: addBtn,
-        status: dropStatus,
-        subject: "视频",
-        onFiles(files) {
-          addFiles(files);
-        },
+      tile.addEventListener('mousemove', (e) => {
+        if (zoomEnabled) onTileMove(e, item);
+      });
+      tile.addEventListener('mouseleave', () => {
+        if (zoomEnabled) onTileLeave();
       });
 
-      const toggleBtn = document.getElementById("sync-toggle");
+      attachReorderHandlers(tile, item);
+    });
+  }
 
-      function refreshToggleLabel() {
-        const anyPlaying = Array.from(document.querySelectorAll("video")).some(
-          (v) => !v.paused && !v.ended,
-        );
-        toggleBtn.textContent = anyPlaying ? "同时暂停" : "同时播放";
+  function removeItem(item) {
+    URL.revokeObjectURL(item.url);
+    items = items.filter(i => i !== item);
+    item.tile.remove();
+    if (zoomEnabled) buildZoomPanels();
+    updateClearBtn();
+    refreshToggleLabel();
+    refreshSharedProgressVisibility();
+    if (items.length === 0) {
+      grid.style.display = 'none';
+      if (fileDropZone) fileDropZone.clear();
+      zoomStrip.classList.remove('active');
+      zoomResizer.classList.remove('active');
+    }
+  }
+
+  function buildZoomPanels() {
+    zoomStrip.innerHTML = '';
+    items.forEach((item) => {
+      const panel = document.createElement('div');
+      panel.className = 'zoom-panel';
+      const canvas = document.createElement('canvas');
+      const zlabel = document.createElement('div');
+      zlabel.className = 'zlabel';
+      const w = item.video.videoWidth || 0;
+      const h = item.video.videoHeight || 0;
+      zlabel.textContent = w && h ? `${item.name}  ·  ${w}×${h}` : item.name;
+      panel.appendChild(canvas);
+      panel.appendChild(zlabel);
+      zoomStrip.appendChild(panel);
+      item.panel = panel;
+      item.canvas = canvas;
+      item.ctx = canvas.getContext('2d');
+    });
+    sizeZoomPanels();
+  }
+
+  let dragSrcItem = null;
+
+  function attachReorderHandlers(tile, item) {
+    tile.addEventListener('dragstart', (e) => {
+      dragSrcItem = item;
+      tile.classList.add('drag-source');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('application/x-video-reorder', item.name); } catch (_) {}
       }
+    });
+    tile.addEventListener('dragend', () => {
+      dragSrcItem = null;
+      tile.classList.remove('drag-source');
+      clearDropMarkers();
+    });
+    tile.addEventListener('dragover', (e) => {
+      if (!dragSrcItem || dragSrcItem === item) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      const rect = tile.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      clearDropMarkers();
+      tile.classList.add(before ? 'drop-before' : 'drop-after');
+    });
+    tile.addEventListener('dragleave', (e) => {
+      if (e.target === tile) tile.classList.remove('drop-before', 'drop-after');
+    });
+    tile.addEventListener('drop', (e) => {
+      if (!dragSrcItem || dragSrcItem === item) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rect = tile.getBoundingClientRect();
+      const before = (e.clientX - rect.left) < rect.width / 2;
+      reorderItem(dragSrcItem, item, before);
+      clearDropMarkers();
+    });
+  }
 
-      toggleBtn.addEventListener("click", () => {
-        const videos = document.querySelectorAll("video");
-        const anyPlaying = Array.from(videos).some((v) => !v.paused && !v.ended);
-        videos.forEach((v) => (anyPlaying ? v.pause() : v.play()));
-        refreshToggleLabel();
-      });
+  function clearDropMarkers() {
+    document.querySelectorAll('.tile.drop-before, .tile.drop-after')
+      .forEach(el => el.classList.remove('drop-before', 'drop-after'));
+  }
 
-      document.addEventListener("play", refreshToggleLabel, true);
-      document.addEventListener("pause", refreshToggleLabel, true);
-      document.addEventListener("ended", refreshToggleLabel, true);
+  function reorderItem(src, target, before) {
+    const fromIdx = items.indexOf(src);
+    if (fromIdx < 0) return;
+    items.splice(fromIdx, 1);
+    let toIdx = items.indexOf(target);
+    if (toIdx < 0) return;
+    if (!before) toIdx += 1;
+    items.splice(toIdx, 0, src);
+    items.forEach(it => grid.appendChild(it.tile));
+    if (zoomEnabled) buildZoomPanels();
+  }
 
-      document.getElementById("sync-reset").addEventListener("click", () => {
-        document.querySelectorAll("video").forEach((v) => {
-          v.pause();
-          v.currentTime = 0;
-        });
-        refreshToggleLabel();
-      });
-      render();
-    </script>
-  </body>
+  function sizeZoomPanels() {
+    if (!items.length || !zoomEnabled) return;
+    const stripWidth = zoomStrip.clientWidth || window.innerWidth;
+    const panelW = Math.max(20, Math.floor(stripWidth / items.length));
+    const panelH = panelPx;
+    const canvasCssSide = Math.max(panelW, panelH);
+    zoomStrip.style.height = panelH + 'px';
+    items.forEach(item => {
+      if (!item.canvas) return;
+      const vw = item.video.videoWidth || 0;
+      const vh = item.video.videoHeight || 0;
+      if (!vw || !vh) return;
+      const srcShortSide = Math.min(vw, vh);
+      const srcSidePx = Math.max(2, Math.round(regionFrac * srcShortSide));
+      item.canvas.width = srcSidePx;
+      item.canvas.height = srcSidePx;
+      item.canvas.style.width = canvasCssSide + 'px';
+      item.canvas.style.height = canvasCssSide + 'px';
+      item.srcSidePx = srcSidePx;
+    });
+  }
+
+  let curU = null, curV = null;
+
+  function onTileMove(e, item) {
+    const rect = item.video.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+      onTileLeave();
+      return;
+    }
+    curU = x / rect.width;
+    curV = y / rect.height;
+    updateAllLenses();
+  }
+
+  function onTileLeave() {
+    curU = curV = null;
+    items.forEach(it => { if (it.lens) it.lens.style.display = 'none'; });
+  }
+
+  function updateAllLenses() {
+    if (curU == null || curV == null) return;
+    items.forEach(it => drawLens(it));
+  }
+
+  function drawLens(item) {
+    const rect = item.video.getBoundingClientRect();
+    const tileRect = item.tile.getBoundingClientRect();
+    const cssBox = Math.max(4, regionFrac * Math.min(rect.width, rect.height));
+    const cx = curU * rect.width + (rect.left - tileRect.left);
+    const cy = curV * rect.height + (rect.top - tileRect.top);
+    item.lens.style.display = 'block';
+    item.lens.style.width = cssBox + 'px';
+    item.lens.style.height = cssBox + 'px';
+    item.lens.style.left = (cx - cssBox / 2) + 'px';
+    item.lens.style.top = (cy - cssBox / 2) + 'px';
+  }
+
+  function drawZoom(item) {
+    const ctx = item.ctx;
+    if (!ctx) return;
+    const canvas = item.canvas;
+    const video = item.video;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    if (!vw || !vh) return;
+    const srcRectSize = canvas.width;
+    const sx = curU * vw - srcRectSize / 2;
+    const sy = curV * vh - srcRectSize / 2;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    try {
+      ctx.drawImage(video, sx, sy, srcRectSize, srcRectSize, 0, 0, canvas.width, canvas.height);
+    } catch (_) {
+      // drawImage can throw before the first frame is decoded; ignore.
+    }
+  }
+
+  function tick() {
+    if (zoomEnabled && curU != null && curV != null) {
+      items.forEach(it => drawZoom(it));
+    }
+    updateSharedProgress(false);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function refreshToggleLabel() {
+    const videos = items.map(it => it.video);
+    const anyPlaying = videos.some(v => !v.paused && !v.ended);
+    toggleBtn.textContent = anyPlaying ? '⏸' : '▶';
+    toggleBtn.title = anyPlaying ? '同时暂停所有视频' : '同时播放所有视频';
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    const videos = items.map(it => it.video);
+    const anyPlaying = videos.some(v => !v.paused && !v.ended);
+    videos.forEach(v => (anyPlaying ? v.pause() : v.play().catch(() => {})));
+    refreshToggleLabel();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    items.forEach(it => {
+      it.video.pause();
+      try { it.video.currentTime = 0; } catch (_) {}
+    });
+    refreshToggleLabel();
+    updateSharedProgress(true);
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (!items.length) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      toggleBtn.click();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      seekAll(Math.max(0, maxCurrentTime() - 5));
+      updateSharedProgress(true);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const total = maxDuration();
+      const target = total > 0 ? Math.min(total, maxCurrentTime() + 5) : maxCurrentTime() + 5;
+      seekAll(target);
+      updateSharedProgress(true);
+    }
+  });
+
+  document.addEventListener('play', refreshToggleLabel, true);
+  document.addEventListener('pause', refreshToggleLabel, true);
+  document.addEventListener('ended', refreshToggleLabel, true);
+
+  // Shared progress bar
+  const PROGRESS_STEPS = 1000;
+  let scrubbing = false;
+
+  function maxDuration() {
+    let m = 0;
+    for (const it of items) {
+      const d = it.video.duration;
+      if (Number.isFinite(d) && d > m) m = d;
+    }
+    return m;
+  }
+
+  function maxCurrentTime() {
+    let m = 0;
+    for (const it of items) {
+      const t = it.video.currentTime;
+      if (Number.isFinite(t) && t > m) m = t;
+    }
+    return m;
+  }
+
+  function refreshSharedProgressVisibility() {
+    sharedProgress.classList.toggle('active', items.length > 0);
+    updateSharedProgress(true);
+  }
+
+  function formatTime(sec) {
+    if (!Number.isFinite(sec) || sec < 0) sec = 0;
+    const s = Math.floor(sec % 60);
+    const m = Math.floor((sec / 60) % 60);
+    const h = Math.floor(sec / 3600);
+    const ss = String(s).padStart(2, '0');
+    if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${ss}`;
+    return `${m}:${ss}`;
+  }
+
+  function updateSharedProgress(force) {
+    if (!items.length) {
+      timeCurrentEl.textContent = '0:00';
+      timeTotalEl.textContent = '0:00';
+      progressSlider.value = '0';
+      return;
+    }
+    const total = maxDuration();
+    timeTotalEl.textContent = formatTime(total);
+    if (scrubbing) return;
+    const cur = maxCurrentTime();
+    timeCurrentEl.textContent = formatTime(cur);
+    const ratio = total > 0 ? cur / total : 0;
+    progressSlider.value = String(Math.round(ratio * PROGRESS_STEPS));
+  }
+
+  function seekAll(targetSec) {
+    items.forEach(it => {
+      const d = it.video.duration;
+      const t = Number.isFinite(d) ? Math.min(targetSec, Math.max(0, d - 0.001)) : targetSec;
+      try { it.video.currentTime = Math.max(0, t); } catch (_) {}
+    });
+  }
+
+  progressSlider.addEventListener('mousedown', () => { scrubbing = true; });
+  progressSlider.addEventListener('touchstart', () => { scrubbing = true; }, { passive: true });
+  const endScrub = () => { scrubbing = false; updateSharedProgress(true); };
+  progressSlider.addEventListener('mouseup', endScrub);
+  progressSlider.addEventListener('touchend', endScrub);
+  progressSlider.addEventListener('input', () => {
+    const total = maxDuration();
+    const ratio = parseFloat(progressSlider.value) / PROGRESS_STEPS;
+    const target = total * ratio;
+    timeCurrentEl.textContent = formatTime(target);
+    seekAll(target);
+  });
+  progressSlider.addEventListener('change', () => {
+    const total = maxDuration();
+    const ratio = parseFloat(progressSlider.value) / PROGRESS_STEPS;
+    seekAll(total * ratio);
+  });
+
+  window.addEventListener('resize', () => {
+    sizeZoomPanels();
+    if (curU != null) updateAllLenses();
+  });
+})();
+</script>
+</body>
 </html>
