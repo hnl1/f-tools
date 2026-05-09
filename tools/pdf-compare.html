@@ -134,6 +134,9 @@
     font-variant-numeric: tabular-nums;
   }
   .col .col-header .remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--remove-bg);
     color: #fff;
     border: none;
@@ -141,10 +144,10 @@
     height: 18px;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 12px;
     line-height: 1;
     padding: 0;
     flex: 0 0 auto;
+    --icon-size: 11px;
   }
   .col .scroller {
     flex: 1 1 0;
@@ -405,9 +408,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     metaEl.textContent = '加载中…';
 
     const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove';
-    removeBtn.textContent = '×';
+    removeBtn.className = 'remove icon-close';
     removeBtn.title = '移除';
+    removeBtn.setAttribute('aria-label', '移除');
 
     colHeader.appendChild(nameEl);
     colHeader.appendChild(metaEl);

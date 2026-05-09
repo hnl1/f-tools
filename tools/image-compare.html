@@ -128,19 +128,23 @@
   }
   .tile .remove {
     position: absolute;
-    bottom: 6px;
+    top: 6px;
     right: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--remove-bg);
     color: #fff;
     border: none;
     width: 24px;
     height: 24px;
+    padding: 0;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 14px;
     line-height: 1;
     opacity: 0;
     transition: opacity 0.15s;
+    --icon-size: 14px;
   }
   .tile:hover .remove { opacity: 1; }
   .tile .lens-rect {
@@ -381,9 +385,9 @@
         tile.appendChild(lens);
 
         const removeBtn = document.createElement('button');
-        removeBtn.className = 'remove';
-        removeBtn.textContent = '×';
+        removeBtn.className = 'remove icon-close';
         removeBtn.title = '移除';
+        removeBtn.setAttribute('aria-label', '移除');
         removeBtn.addEventListener('click', (ev) => {
           ev.stopPropagation();
           removeItem(item);

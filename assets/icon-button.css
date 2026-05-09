@@ -1,0 +1,74 @@
+/* 图标渲染：给任意元素加上 .icon-{name}，它的 ::before 会用 mask 渲染对应图标。
+   尺寸通过 --icon-size 控制，默认 1em；颜色通过 currentColor 跟随文字色。
+   消费方零感知：不需要碰 mask、不需要碰 --icon-url、不需要知道 SVG 在哪。 */
+
+.icon-home::before,
+.icon-computer::before,
+.icon-sun::before,
+.icon-moon::before,
+.icon-trash::before,
+.icon-close::before {
+  content: "";
+  display: inline-block;
+  width: var(--icon-size, 1em);
+  height: var(--icon-size, 1em);
+  background: currentColor;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-mode: alpha;
+  mask-mode: alpha;
+}
+
+.icon-home::before     { -webkit-mask-image: var(--icon-home);     mask-image: var(--icon-home); }
+.icon-computer::before { -webkit-mask-image: var(--icon-computer); mask-image: var(--icon-computer); }
+.icon-sun::before      { -webkit-mask-image: var(--icon-sun);      mask-image: var(--icon-sun); }
+.icon-moon::before     { -webkit-mask-image: var(--icon-moon);     mask-image: var(--icon-moon); }
+.icon-trash::before    { -webkit-mask-image: var(--icon-trash);    mask-image: var(--icon-trash); }
+.icon-close::before    { -webkit-mask-image: var(--icon-close);    mask-image: var(--icon-close); }
+
+/* 图标按钮：纯图标的方形按钮组件（头部主页/主题/清空等场景）。
+   配合任意 .icon-{name} class 使用，按钮只负责"按钮的样子"，图标由 .icon-{name} 负责。 */
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--tool-icon-button-size);
+  min-width: var(--tool-icon-button-size);
+  height: var(--tool-icon-button-size);
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--ft-radius-sm);
+  box-shadow: none;
+  text-decoration: none;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  --icon-size: var(--tool-icon-size);
+}
+
+.icon-btn:not(:disabled):hover {
+  color: var(--accent);
+  background: var(--accent-tint);
+}
+
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.icon-btn.danger:not(:disabled):hover {
+  color: var(--danger, #dc2626);
+  background: var(--danger-hover-bg, var(--accent-tint));
+}
+
+.tool-header .back-link + .icon-btn {
+  margin-left: -8px;
+}

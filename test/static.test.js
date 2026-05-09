@@ -15,9 +15,7 @@ const toolPages = [
 const hiddenPages = [
   "tools/icons.html",
 ];
-const secondaryPages = [
-  "index2.html",
-];
+const secondaryPages = [];
 const fileInputPages = [
   "tools/video-compare.html",
   "tools/image-compare.html",
@@ -67,21 +65,13 @@ test("home page links to every tool under tools/", () => {
   for (const page of toolPages) {
     assert.match(html, new RegExp(`href="${page}"`), `index.html should link to ${page}`);
   }
-
-  for (const page of hiddenPages) {
-    assert.doesNotMatch(html, new RegExp(`href="${page}"`), `index.html should not link to hidden page ${page}`);
-  }
-
-  for (const page of secondaryPages) {
-    assert.doesNotMatch(html, new RegExp(`href="${page}"`), `index.html should not link to secondary page ${page}`);
-  }
 });
 
-test("secondary entry links to hidden pages", () => {
-  const html = read("index2.html");
+test("home page footer links to hidden pages", () => {
+  const html = read("index.html");
 
   for (const page of hiddenPages) {
-    assert.match(html, new RegExp(`href="${page}"`), `index2.html should link to hidden page ${page}`);
+    assert.match(html, new RegExp(`href="${page}"`), `index.html footer should link to hidden page ${page}`);
   }
 });
 
@@ -357,19 +347,53 @@ test("shared tool header style is sticky", () => {
   assert.match(css, /\.tool-header\s*\{[\s\S]*top:\s*0;/);
 });
 
+test("icon rendering stays encapsulated in the shared icon button stylesheet", () => {
+  // 消费方（工具页 / 共享脚本 / 其它样式表）不应该自己写 mask、--icon-url 等
+  // 图标渲染细节，只能通过 .icon-{name} class 使用图标。这条测试守住封装边界。
+  const filesToCheck = [
+    "assets/common.css",
+    "assets/icons.css",
+    "assets/clear-button.js",
+    "assets/file-input.js",
+    "assets/home-link.js",
+    "assets/theme-toggle.js",
+    "assets/tool-header.js",
+    "index.html",
+    ...toolPages,
+  ];
+
+  const forbidden = [
+    { pattern: /\b(?:-webkit-)?mask(?:-image|-mode|-size|-position|-repeat)?\s*:/, label: "mask 相关 CSS 属性" },
+    { pattern: /--icon-url\b/, label: "--icon-url 变量" },
+    { pattern: /var\(--icon-(?:home|computer|sun|moon|trash|close)\)/, label: "var(--icon-X) 直接引用" },
+  ];
+
+  for (const file of filesToCheck) {
+    const content = read(file);
+    for (const { pattern, label } of forbidden) {
+      assert.doesNotMatch(
+        content,
+        pattern,
+        `${file} 不应该包含 ${label}——图标渲染细节应只在 assets/icon-button.css 内`
+      );
+    }
+  }
+});
+
 test("shared icon definitions live in the icon stylesheet", () => {
   const commonCss = read("assets/common.css");
   const iconCss = read("assets/icons.css");
+  const iconButtonCss = read("assets/icon-button.css");
   const iconPage = read("tools/icons.html");
 
   assert.match(commonCss, /@import url\("\.\/icons\.css"\);/);
-  assert.doesNotMatch(commonCss, /--icon-(?:home|computer|sun|moon|trash):\s*url\(/);
+  assert.match(commonCss, /@import url\("\.\/icon-button\.css"\);/);
+  assert.doesNotMatch(commonCss, /--icon-(?:home|computer|sun|moon|trash|close):\s*url\(/);
 
-  for (const icon of ["home", "computer", "sun", "moon", "trash"]) {
+  for (const icon of ["home", "computer", "sun", "moon", "trash", "close"]) {
     assert.match(iconCss, new RegExp(`--icon-${icon}:\\s*url\\(`));
-    assert.match(commonCss, new RegExp(`--icon-url:\\s*var\\(--icon-${icon}\\)`));
-    assert.match(iconPage, new RegExp(`--icon-url:\\s*var\\(--icon-${icon}\\)`));
-    assert.match(iconPage, new RegExp(`--icon-${icon}`));
+    assert.match(iconButtonCss, new RegExp(`mask-image:\\s*var\\(--icon-${icon}\\)`));
+    assert.match(iconPage, new RegExp(`icon-${icon}`));
   }
 });
 

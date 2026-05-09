@@ -31,6 +31,8 @@
   // 同步应用一次，避免 FOUC
   applyThemeAttrs(getPref());
 
+  const PREF_TO_ICON = { auto: 'icon-computer', light: 'icon-sun', dark: 'icon-moon' };
+
   function create() {
     const btn = document.createElement('button');
     btn.id = 'theme-toggle';
@@ -42,6 +44,8 @@
       const pref = getPref();
       btn.dataset.pref = pref;
       btn.title = TITLES[pref];
+      for (const cls of Object.values(PREF_TO_ICON)) btn.classList.remove(cls);
+      btn.classList.add(PREF_TO_ICON[pref]);
     }
 
     refresh();

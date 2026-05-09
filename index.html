@@ -160,6 +160,18 @@
             border-color: var(--primary-500);
         }
 
+        footer .icon-link {
+            margin-left: 12px;
+            border-bottom: 0;
+            font-size: 1.125rem;
+            line-height: 1;
+            vertical-align: middle;
+        }
+
+        footer .icon-link:hover {
+            border-bottom: 0;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 32px 16px;
@@ -180,7 +192,7 @@
         <div class="theme-toggle-host" id="theme-toggle-host"></div>
         <header class="header">
             <h1>f-tools</h1>
-            <p>一些自用的纯前端小工具</p>
+            <p>纯前端小工具</p>
         </header>
 
         <div class="grid">
@@ -222,6 +234,7 @@
 
         <footer>
             <a href="https://github.com/hnl1/f-tools" target="_blank" rel="noopener">GitHub</a>
+            <a class="icon-link" href="tools/icons.html" aria-label="图标预览" title="图标预览">🎨</a>
         </footer>
     </div>
 

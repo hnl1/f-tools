@@ -1,4 +1,5 @@
 @import url("./icons.css");
+@import url("./icon-button.css");
 
 :root {
   --ft-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -147,59 +148,6 @@ body.tool-page > main {
   flex: 0 0 auto;
 }
 
-.icon-btn {
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tool-icon-button-size);
-  height: var(--tool-icon-button-size);
-  padding: 0;
-  border-radius: var(--ft-radius-sm);
-  flex: 0 0 auto;
-  text-decoration: none;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  cursor: pointer;
-  font: inherit;
-}
-
-.icon-btn:hover {
-  color: var(--accent);
-  background: var(--accent-tint);
-  border-color: transparent;
-}
-
-.tool-header .back-link + .icon-btn {
-  margin-left: -8px;
-}
-
-.icon-btn::before {
-  content: "";
-  width: var(--tool-icon-size);
-  height: var(--tool-icon-size);
-  background: currentColor;
-  -webkit-mask: var(--icon-url) center / contain no-repeat;
-  mask: var(--icon-url) center / contain no-repeat;
-}
-
-.icon-btn.back-link {
-  --icon-url: var(--icon-home);
-}
-
-.icon-btn#theme-toggle[data-pref="auto"] {
-  --icon-url: var(--icon-computer);
-}
-
-.icon-btn#theme-toggle[data-pref="light"] {
-  --icon-url: var(--icon-sun);
-}
-
-.icon-btn#theme-toggle[data-pref="dark"] {
-  --icon-url: var(--icon-moon);
-}
-
 body.tool-page button:not(.icon-btn),
 body.tool-page .button:not(.icon-btn),
 body.tool-page .tool-button {
@@ -220,8 +168,8 @@ body.tool-page .tool-button {
   line-height: var(--tool-button-line-height);
 }
 
-body.tool-page button:not(:disabled):hover,
-body.tool-page .button:not(:disabled):hover {
+body.tool-page button:not(.icon-btn):not(:disabled):hover,
+body.tool-page .button:not(.icon-btn):not(:disabled):hover {
   background: var(--button-hover);
   border-color: var(--accent);
 }
@@ -237,62 +185,14 @@ body.tool-page .button.primary:not(:disabled):hover {
   border-color: var(--accent-strong);
 }
 
-body.tool-page button.danger {
+body.tool-page button.danger:not(.icon-btn),
+body.tool-page .button.danger:not(.icon-btn) {
   color: var(--danger, #dc2626);
 }
 
-body.tool-page button.danger:not(.icon-action-btn),
-body.tool-page .button.danger:not(.icon-action-btn) {
-  color: var(--danger, #dc2626);
-}
-
-body.tool-page button.danger:hover:not(:disabled) {
+body.tool-page button.danger:not(.icon-btn):hover:not(:disabled) {
   border-color: var(--danger-border, var(--accent));
   background: var(--danger-hover-bg, var(--button-hover));
-}
-
-body.tool-page .icon-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--tool-icon-button-size);
-  min-width: var(--tool-icon-button-size);
-  height: var(--tool-icon-button-size);
-  padding: 0;
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
-  border-radius: var(--ft-radius-sm);
-  box-shadow: none;
-  cursor: pointer;
-  line-height: 1;
-}
-
-body.tool-page .icon-action-btn:not(:disabled):hover {
-  color: var(--accent);
-  background: var(--accent-tint);
-}
-
-body.tool-page .icon-action-btn.danger {
-  color: var(--danger, #dc2626);
-}
-
-body.tool-page .icon-action-btn.danger:not(:disabled):hover {
-  color: var(--danger, #dc2626);
-  background: var(--danger-hover-bg, var(--accent-tint));
-}
-
-body.tool-page .icon-action-btn::before {
-  content: "";
-  width: var(--tool-icon-size);
-  height: var(--tool-icon-size);
-  background: currentColor;
-  -webkit-mask: var(--icon-url) center / contain no-repeat;
-  mask: var(--icon-url) center / contain no-repeat;
-}
-
-body.tool-page .icon-action-btn.trash {
-  --icon-url: var(--icon-trash);
 }
 
 body.tool-page button:disabled,

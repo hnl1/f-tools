@@ -14,13 +14,6 @@
     padding: 32px 0 48px;
   }
 
-  .icon-gallery-intro {
-    margin: 0 0 18px;
-    color: var(--text-muted);
-    font-size: 13px;
-    line-height: 1.6;
-  }
-
   .icon-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -40,39 +33,8 @@
   }
 
   .icon-preview {
-    width: 48px;
-    height: 48px;
+    --icon-size: 48px;
     color: var(--text);
-  }
-
-  .icon-preview::before {
-    content: "";
-    display: block;
-    width: 100%;
-    height: 100%;
-    background: currentColor;
-    -webkit-mask: var(--icon-url) center / contain no-repeat;
-    mask: var(--icon-url) center / contain no-repeat;
-  }
-
-  .icon-preview.home {
-    --icon-url: var(--icon-home);
-  }
-
-  .icon-preview.computer {
-    --icon-url: var(--icon-computer);
-  }
-
-  .icon-preview.sun {
-    --icon-url: var(--icon-sun);
-  }
-
-  .icon-preview.moon {
-    --icon-url: var(--icon-moon);
-  }
-
-  .icon-preview.trash {
-    --icon-url: var(--icon-trash);
   }
 
   .icon-name {
@@ -92,32 +54,36 @@
 <body class="tool-page">
 <main>
   <section class="icon-gallery">
-    <p class="icon-gallery-intro">这个页面不放到首页入口，只用于直接访问时检查共享图标。</p>
     <div class="icon-grid" aria-label="共享图标预览">
       <div class="icon-card">
-        <span class="icon-preview home" aria-hidden="true"></span>
+        <span class="icon-preview icon-home" aria-hidden="true"></span>
         <span class="icon-name">房子</span>
-        <span class="icon-token">--icon-home</span>
+        <span class="icon-token">.icon-home</span>
       </div>
       <div class="icon-card">
-        <span class="icon-preview computer" aria-hidden="true"></span>
+        <span class="icon-preview icon-computer" aria-hidden="true"></span>
         <span class="icon-name">电脑</span>
-        <span class="icon-token">--icon-computer</span>
+        <span class="icon-token">.icon-computer</span>
       </div>
       <div class="icon-card">
-        <span class="icon-preview sun" aria-hidden="true"></span>
+        <span class="icon-preview icon-sun" aria-hidden="true"></span>
         <span class="icon-name">太阳</span>
-        <span class="icon-token">--icon-sun</span>
+        <span class="icon-token">.icon-sun</span>
       </div>
       <div class="icon-card">
-        <span class="icon-preview moon" aria-hidden="true"></span>
+        <span class="icon-preview icon-moon" aria-hidden="true"></span>
         <span class="icon-name">月亮</span>
-        <span class="icon-token">--icon-moon</span>
+        <span class="icon-token">.icon-moon</span>
       </div>
       <div class="icon-card">
-        <span class="icon-preview trash" aria-hidden="true"></span>
+        <span class="icon-preview icon-trash" aria-hidden="true"></span>
         <span class="icon-name">垃圾桶</span>
-        <span class="icon-token">--icon-trash</span>
+        <span class="icon-token">.icon-trash</span>
+      </div>
+      <div class="icon-card">
+        <span class="icon-preview icon-close" aria-hidden="true"></span>
+        <span class="icon-name">叉号</span>
+        <span class="icon-token">.icon-close</span>
       </div>
     </div>
   </section>

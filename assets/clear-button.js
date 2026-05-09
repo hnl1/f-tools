@@ -7,7 +7,7 @@
     const btn = document.createElement('button');
     btn.id = 'clear-btn';
     btn.type = 'button';
-    btn.className = 'icon-action-btn trash';
+    btn.className = 'icon-btn icon-trash danger';
     btn.title = label;
     btn.setAttribute('aria-label', label);
     btn.disabled = true;

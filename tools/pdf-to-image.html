@@ -230,6 +230,9 @@
     white-space: nowrap;
   }
   .bulk-progress-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 24px;
     height: 24px;
     margin: 0;
@@ -238,8 +241,8 @@
     background: transparent;
     border: 0;
     box-shadow: none;
-    font-size: 18px;
     line-height: 1;
+    --icon-size: 14px;
   }
   .bulk-progress-close:not(:disabled):hover {
     color: var(--accent);
@@ -381,7 +384,7 @@
           </span>
           <span>
             <span id="bulk-progress-count" class="bulk-progress-count">0 / 0</span>
-            <button id="bulk-progress-close" class="button bulk-progress-close" type="button" aria-label="关闭进度详情">×</button>
+            <button id="bulk-progress-close" class="bulk-progress-close icon-close" type="button" aria-label="关闭进度详情"></button>
           </span>
         </div>
         <div class="bulk-progress-track" aria-hidden="true">
@@ -729,7 +732,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     compareBtn.hidden = true;
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'button icon-action-btn trash delete-item-btn';
+    deleteBtn.className = 'icon-btn icon-trash delete-item-btn';
     deleteBtn.type = 'button';
     deleteBtn.title = `删除 ${displayName}`;
     deleteBtn.setAttribute('aria-label', deleteBtn.title);
