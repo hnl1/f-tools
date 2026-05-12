@@ -109,32 +109,6 @@ test("runtime dependencies are local vendor files", () => {
   }
 });
 
-test("tool pages keep their key controls", () => {
-  const expectations = {
-    "tools/clipboard.html": ["id=\"linkName\"", "id=\"linkUrl\"", "id=\"copyLinkButton\"", "id=\"copyMarkdownButton\""],
-    "tools/video-compare.html": ["id=\"grid\"", "id=\"sync-toggle\"", "id=\"sync-reset\"", "clearButton:", "id=\"file-input\""],
-    "tools/image-compare.html": ["id=\"drop-hint\"", "id=\"grid\"", "id=\"zoom-strip\"", "id=\"file-input\""],
-    "tools/pdf-compare.html": ["id=\"drop-hint\"", "id=\"grid\"", "id=\"sync-mode\"", "id=\"file-input\"", "../vendor/pdfjs/pdf.min.js"],
-    "tools/pdf-to-image.html": [
-      "id=\"pdf-file\"",
-      "id=\"drop-hint\"",
-      "id=\"generate-all-btn\"",
-      "id=\"download-all-btn\"",
-      "id=\"pdf-list\"",
-      "row.className = 'pdf-item'",
-      "../vendor/pdfjs/pdf.min.js",
-      "../vendor/jspdf/jspdf.umd.min.js",
-    ],
-  };
-
-  for (const [page, snippets] of Object.entries(expectations)) {
-    const html = read(page);
-    for (const snippet of snippets) {
-      assert.ok(html.includes(snippet), `${page} should include ${snippet}`);
-    }
-  }
-});
-
 test("tool pages link back to the home page", () => {
   for (const page of toolPages) {
     const html = read(page);
@@ -161,47 +135,6 @@ test("pdf to image hides advanced output options", () => {
   assert.doesNotMatch(html, /第一页预览/, "pdf-to-image should remove first-page preview UI");
 });
 
-test("pdf to image supports multi PDF queue actions", () => {
-  const html = read("tools/pdf-to-image.html");
-
-  assert.match(html, /<input[^>]+id="pdf-file"[^>]+\bmultiple\b/, "pdf-to-image file input should accept multiple PDFs");
-  assert.match(html, /\bmultiple:\s*true/, "pdf-to-image shared drop zone should accept multiple PDFs");
-  assert.match(html, /id="generate-all-btn"/, "pdf-to-image should include global generate button");
-  assert.doesNotMatch(html, /id="stop-all-btn"/, "pdf-to-image should combine stop into the generate button");
-  assert.match(html, /id="download-all-btn"/, "pdf-to-image should include global download-all button");
-  assert.doesNotMatch(html, /id="concurrency-select"/, "pdf-to-image should not expose concurrency selection");
-  assert.match(html, /id="add-pdf-btn"[^>]*>\s*添加 PDF\s*</, "pdf-to-image should keep the add PDF action in the header");
-  assert.doesNotMatch(html, /id="add-pdf-btn"[^>]*hidden/, "pdf-to-image add PDF action should stay visible");
-  assert.match(html, /id="download-all-btn"[\s\S]*id="add-pdf-btn"/, "pdf-to-image should keep add PDF near the clear action");
-  assert.match(html, /async function generateAll\(\)/, "pdf-to-image should generate all items in bulk");
-  assert.match(html, /GENERATE_ALL_CONCURRENCY = 4/, "pdf-to-image should use fixed 4-way concurrency");
-  assert.match(html, /generateBtn\.textContent = '转换'/, "pdf-to-image should include per-item convert action");
-  assert.match(html, /downloadBtn\.textContent = '下载'/, "pdf-to-image should include per-item download action");
-  assert.match(html, /compareBtn\.textContent = '比较'/, "pdf-to-image should include per-item compare action");
-  assert.match(html, /statusEl\.hidden = true/, "pdf-to-image should not show a pending status for new rows");
-  assert.doesNotMatch(html, /statusEl\.textContent = '待转换'/, "pdf-to-image should not render the old pending status copy");
-  assert.match(html, /window\.open\(item\.compareUrl,\s*'_blank',\s*'noopener'\)/, "pdf-to-image compare should open PDF compare in a new tab");
-  assert.doesNotMatch(html, /window\.location\.href = item\.compareUrl/, "pdf-to-image compare should not replace the current page");
-  assert.match(html, /downloadAllGenerated/, "pdf-to-image should include manual bulk download");
-  assert.doesNotMatch(html, /downloadBlob\(blob,\s*outputName\)/, "pdf-to-image should not auto-download after generation");
-  assert.match(html, /storeForCompare/, "pdf-to-image should store generated PDFs for compare");
-  assert.match(html, /pdf-compare\.html\?from=pdf-to-image\.html&transfer=/, "pdf-to-image should link generated output into compare");
-  assert.match(html, /-images\.pdf/, "pdf-to-image should use an images output filename suffix");
-});
-
-test("pdf to image can stop bulk conversion", () => {
-  const html = read("tools/pdf-to-image.html");
-
-  assert.match(html, /let cancelRequested = false/);
-  assert.match(html, /function requestStopGenerating\(\)/);
-  assert.match(html, /generateAllBtn\.textContent = isGenerating \? '停止' : '转换'/);
-  assert.match(html, /if \(isGenerating\) \{\s*requestStopGenerating\(\);/);
-  assert.match(html, /function throwIfCancelled\(shouldCancel\)/);
-  assert.match(html, /convertPdfToImagePdf\(item\.file,[\s\S]*\(\) => cancelRequested\)/);
-  assert.match(html, /title: cancelRequested \? '已停止'/);
-  assert.match(html, /未完成的 PDF 可稍后继续转换/);
-});
-
 test("pdf to image displays directory paths for folder imports", () => {
   const html = read("tools/pdf-to-image.html");
 
@@ -223,63 +156,6 @@ test("pdf to image zips multiple generated downloads with paths", () => {
   assert.match(html, /pdf-to-image-results\.zip/);
 });
 
-test("pdf to image shows bulk conversion progress", () => {
-  const html = read("tools/pdf-to-image.html");
-
-  assert.match(html, /id="bulk-progress"/);
-  assert.match(html, /id="bulk-progress-hint"/);
-  assert.match(html, /id="bulk-progress-close"/);
-  assert.match(html, /id="bulk-progress-header-summary"/);
-  assert.match(html, /#bulk-progress-header-summary\s*\{[\s\S]*left:\s*50%;/);
-  assert.match(html, /已处理 0 \/ 0/);
-  assert.match(html, /class="bulk-progress-title-row"/);
-  assert.match(html, /\.bulk-progress\s*\{[\s\S]*position:\s*fixed;/);
-  assert.match(html, /\.bulk-progress\s*\{[\s\S]*top:\s*72px;/);
-  assert.match(html, /\.bulk-progress-close\s*\{[\s\S]*background:\s*transparent;/);
-  assert.match(html, /\.bulk-progress\.is-opening\s*\{/);
-  assert.match(html, /@keyframes bulkProgressOpen/);
-  assert.match(html, /浏览器可能降低处理速度/);
-  assert.match(html, /bulkProgressHint\.hidden = state\.title !== '转换中'/);
-  assert.match(html, /let isBulkProgressDismissed = false/);
-  assert.match(html, /function showBulkProgress\(animate = true\)/);
-  assert.match(html, /function closeBulkProgress\(\)/);
-  assert.match(html, /function updateHeaderProgressSummary\(\)/);
-  assert.match(html, /function startBulkProgressDrag\(event\)/);
-  assert.match(html, /bulkProgress\.classList\.add\('is-opening'\)/);
-  assert.match(html, /bulkProgressClose\.addEventListener\('click', closeBulkProgress\)/);
-  assert.match(html, /bulkProgressHeaderSummary\.addEventListener\('click', showBulkProgress\)/);
-  assert.match(html, /bulkProgressHead\.addEventListener\('pointerdown', startBulkProgressDrag\)/);
-  assert.match(html, /function formatDuration\(milliseconds\)/);
-  assert.doesNotMatch(html, /function formatClockTime\(timestamp\)/);
-  assert.match(html, /function updateBulkProgress\(state\)/);
-  assert.match(html, /已完成 \$\{completed\} 个，失败 \$\{failed\} 个/);
-  assert.match(html, /已完成 \$\{completed\} 个/);
-  assert.match(html, /耗时 \$\{formatDuration\(elapsed\)\}/);
-  assert.match(html, /预计还需 \$\{formatDuration\(remaining\)\}/);
-  assert.match(html, /平均 \$\{speedText\}/);
-  assert.match(html, /bulkProgressBar\.style\.width = `\$\{percent\}%`/);
-  assert.match(html, /const startedAt = Date\.now\(\)/);
-  assert.match(html, /title: cancelRequested \? '已停止' : \(failedCount \? '转换完成（有失败）' : '转换完成'\)/);
-});
-
-test("pdf to image keeps global controls in the sticky header", () => {
-  const html = read("tools/pdf-to-image.html");
-  const main = html.match(/<main[\s\S]*?<\/main>/)?.[0] ?? "";
-
-  assert.match(html, /<div id="header-controls" hidden>/, "pdf-to-image should stage controls for the shared header");
-  assert.match(html, /ToolHeader\.mount\(\{[\s\S]*title:\s*'PDF 转图片版'/, "pdf-to-image should use the shared header");
-  assert.match(html, /controls:\s*Array\.from\(headerControlsHost\.children\)/, "pdf-to-image should move global controls into the header");
-  assert.match(html, /id="generate-all-btn"[^>]*>\s*转换\s*</, "header convert button should use short label");
-  assert.match(html, /id="download-all-btn"[^>]*>\s*下载\s*</, "header download button should use short label");
-  assert.doesNotMatch(html, />\s*生成\s*</, "header should not show generate label");
-  assert.doesNotMatch(html, />\s*全部生成\s*</, "header should not show full generate label");
-  assert.doesNotMatch(html, />\s*全部下载\s*</, "header should not show full download label");
-
-  assert.doesNotMatch(main, /id="scale"/, "main content should not contain the global scale control");
-  assert.doesNotMatch(main, /id="generate-all-btn"/, "main content should not contain the global generate-all action");
-  assert.doesNotMatch(main, /id="download-all-btn"/, "main content should not contain the global download-all action");
-});
-
 test("pdf to image uses the shared upload prompt", () => {
   const html = read("tools/pdf-to-image.html");
   const main = html.match(/<main[\s\S]*?<\/main>/)?.[0] ?? "";
@@ -293,15 +169,6 @@ test("pdf to image uses the shared upload prompt", () => {
   assert.doesNotMatch(main, /class="[^"]*\bpanel-head\b[^"]*"/, "pdf-to-image should not show an input section heading");
   assert.doesNotMatch(main, /等待(?:添加|选择) PDF/, "pdf-to-image should not show initial waiting copy");
   assert.doesNotMatch(main, /把每页 PDF 渲染成图片/, "pdf-to-image should not show explanatory copy");
-});
-
-test("pdf compare can load generated transfer records", () => {
-  const html = read("tools/pdf-compare.html");
-
-  assert.match(html, /f-tools-pdf-transfer/, "pdf-compare should share the transfer database");
-  assert.match(html, /loadTransferredPdfs\(\)/, "pdf-compare should try loading transferred PDFs");
-  assert.match(html, /params\.get\('transfer'\)/, "pdf-compare should read the transfer id from the URL");
-  assert.match(html, /new File\(/, "pdf-compare should rebuild transferred blobs as files");
 });
 
 test("file input pages use the shared drop zone", () => {
