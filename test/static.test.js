@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import vm from "node:vm";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const toolPages = [
@@ -394,6 +395,79 @@ test("shared icon definitions live in the icon stylesheet", () => {
     assert.match(iconCss, new RegExp(`--icon-${icon}:\\s*url\\(`));
     assert.match(iconButtonCss, new RegExp(`mask-image:\\s*var\\(--icon-${icon}\\)`));
     assert.match(iconPage, new RegExp(`icon-${icon}`));
+  }
+});
+
+test("favicon config covers every page and is loaded by every page", () => {
+  const scriptPath = "assets/favicons.js";
+  assert.ok(existsSync(path.join(root, scriptPath)), `${scriptPath} should exist`);
+
+  const sandbox = { window: {} };
+  vm.createContext(sandbox);
+  vm.runInContext(read(scriptPath), sandbox);
+  const MAP = sandbox.window.Favicons && sandbox.window.Favicons.MAP;
+  assert.ok(MAP && typeof MAP === "object", "favicons.js should expose Favicons.MAP");
+
+  for (const page of pages) {
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(MAP, page),
+      `favicons.js should declare a favicon for ${page}`
+    );
+    assert.ok(MAP[page], `${page} favicon should be a non-empty string`);
+  }
+
+  for (const page of Object.keys(MAP)) {
+    assert.ok(pages.includes(page), `favicons.js declares unknown page ${page}`);
+  }
+
+  for (const page of pages) {
+    const html = read(page);
+    const expectedSrc = page === "index.html" ? "assets/favicons.js" : "../assets/favicons.js";
+    assert.match(
+      html,
+      new RegExp(`<script src="${expectedSrc.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}"></script>`),
+      `${page} should load the shared favicon config script`
+    );
+    assert.doesNotMatch(
+      html,
+      /<link[^>]+rel="icon"/,
+      `${page} should not hardcode a favicon link; let favicons.js inject it`
+    );
+  }
+});
+
+test("home page entry icons match each page's favicon config", () => {
+  const sandbox = { window: {} };
+  vm.createContext(sandbox);
+  vm.runInContext(read("assets/favicons.js"), sandbox);
+  const MAP = sandbox.window.Favicons.MAP;
+
+  const html = read("index.html");
+
+  for (const page of toolPages) {
+    const cardPattern = new RegExp(
+      `<a[^>]*class="card"[^>]*href="${page.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}"[\\s\\S]*?<div class="icon">([^<]+)</div>`
+    );
+    const match = html.match(cardPattern);
+    assert.ok(match, `index.html should have a card linking to ${page} with an icon`);
+    assert.equal(
+      match[1].trim(),
+      MAP[page],
+      `index.html card for ${page} should use the favicon declared in favicons.js (${MAP[page]})`
+    );
+  }
+
+  for (const page of hiddenPages) {
+    const linkPattern = new RegExp(
+      `<a[^>]*class="[^"]*\\bicon-link\\b[^"]*"[^>]*href="${page.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}"[^>]*>([^<]+)</a>`
+    );
+    const match = html.match(linkPattern);
+    assert.ok(match, `index.html footer should link to ${page} with an icon`);
+    assert.equal(
+      match[1].trim(),
+      MAP[page],
+      `index.html footer entry for ${page} should use the favicon declared in favicons.js (${MAP[page]})`
+    );
   }
 });
 
