@@ -209,15 +209,6 @@
       <option value="off">关闭</option>
     </select>
   </label>
-  <label title="渲染清晰度倍数">
-    清晰度
-    <select id="dpr">
-      <option value="1">1x</option>
-      <option value="1.5">1.5x</option>
-      <option value="2" selected>2x</option>
-      <option value="3">3x</option>
-    </select>
-  </label>
   <button id="add-btn" type="button">添加 PDF</button>
   <input type="file" id="file-input" class="visually-hidden-file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
 </div>
@@ -258,21 +249,16 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   const fileInput = document.getElementById('file-input');
   const dropStatus = document.getElementById('pdf-drop-status');
   const syncModeSel = document.getElementById('sync-mode');
-  const dprSel = document.getElementById('dpr');
   let fileDropZone = null;
 
   /** @type {{name:string, file:File, pdf:any, col:HTMLElement, scroller:HTMLElement, pagesEl:HTMLElement, pageEls:HTMLElement[], pageOffsets:number[], numPages:number}[]} */
   let items = [];
 
-  let renderScale = parseFloat(dprSel.value);
+  const RENDER_SCALE = 4;
   let syncMode = syncModeSel.value;
   let isSyncing = false;
 
   syncModeSel.addEventListener('change', () => { syncMode = syncModeSel.value; });
-  dprSel.addEventListener('change', async () => {
-    renderScale = parseFloat(dprSel.value);
-    for (const it of items) await rerenderColumn(it);
-  });
 
   function updateClearBtn() {
     clearBtn.setCount(items.length);
@@ -477,7 +463,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
       const page = await item.pdf.getPage(i);
       const viewport = page.getViewport({ scale: 1 });
       const cssScale = colWidth / viewport.width;
-      const renderViewport = page.getViewport({ scale: cssScale * renderScale });
+      const renderViewport = page.getViewport({ scale: cssScale * RENDER_SCALE });
 
       const pageWrap = document.createElement('div');
       pageWrap.className = 'page';
