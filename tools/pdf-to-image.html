@@ -9,6 +9,7 @@
 <script src="../assets/home-link.js"></script>
 <script src="../assets/clear-button.js"></script>
 <script src="../assets/tool-header.js"></script>
+<script src="../assets/elapsed-timer.js"></script>
 <style>
   :root[data-theme="dark"] {
     color-scheme: dark;
@@ -628,7 +629,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     activeMs: 0,
     sessionStartedAt: null,
   };
-  let bulkTickerHandle = null;
 
   function getBulkElapsedMs() {
     let ms = bulkProgressState.activeMs;
@@ -638,20 +638,20 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     return ms;
   }
 
+  const bulkTimer = ElapsedTimer.create({
+    element: bulkProgressTime,
+    getElapsedMs: getBulkElapsedMs,
+  });
+
   function ensureBulkTicker() {
-    const active = !!bulkProgressState.sessionStartedAt;
-    if (active && !bulkTickerHandle) {
-      bulkTickerHandle = setInterval(renderBulkProgress, 1000);
-    } else if (!active && bulkTickerHandle) {
-      clearInterval(bulkTickerHandle);
-      bulkTickerHandle = null;
-    }
+    if (bulkProgressState.sessionStartedAt) bulkTimer.start();
+    else bulkTimer.stop();
   }
 
   function hideBulkProgress() {
     bulkProgressState.activeMs = 0;
     bulkProgressState.sessionStartedAt = null;
-    ensureBulkTicker();
+    bulkTimer.stop();
     bulkProgress.classList.remove('is-done');
     bulkProgressCount.textContent = '0 / 0';
     bulkProgressBar.style.width = '0%';
@@ -703,7 +703,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     const percent = total ? Math.round((completed / total) * 100) : 0;
     bulkProgressBar.style.width = `${percent}%`;
     bulkProgressPercent.textContent = `${percent}%`;
-    bulkProgressTime.textContent = formatHms(elapsed);
     bulkProgressSpeed.textContent = speedText;
     bulkProgressMeta.textContent = failed ? `失败 ${failed}` : '';
     bulkProgressMetaSep.hidden = !failed;
@@ -824,36 +823,21 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     }
   }
 
+  function formatItemRate(item) {
+    const completedPages = item.status === 'generated'
+      ? (item.pageCount || 0)
+      : Math.max(0, (item.currentPage || 0) - 1);
+    return `${getItemSpeed(item, completedPages).toFixed(2)} 页/秒`;
+  }
+
   function renderItemSpeed(item) {
-    const speedEl = item.elements.speed;
-    speedEl.innerHTML = '';
-
-    if (item.status === 'generating') {
-      const time = document.createElement('div');
-      time.className = 'pdf-speed-line is-primary';
-      time.textContent = formatHms(getItemElapsedMs(item));
-      const completed = Math.max(0, (item.currentPage || 0) - 1);
-      const speed = getItemSpeed(item, completed);
-      const rate = document.createElement('div');
-      rate.className = 'pdf-speed-line';
-      rate.textContent = `${speed.toFixed(2)} 页/秒`;
-      speedEl.appendChild(time);
-      speedEl.appendChild(rate);
-      return;
-    }
-
-    if (item.status === 'generated') {
-      const totalPages = item.pageCount || 0;
-      const time = document.createElement('div');
-      time.className = 'pdf-speed-line is-primary';
-      time.textContent = formatHms(getItemElapsedMs(item));
-      const speed = getItemSpeed(item, totalPages);
-      const rate = document.createElement('div');
-      rate.className = 'pdf-speed-line';
-      rate.textContent = `${speed.toFixed(2)} 页/秒`;
-      speedEl.appendChild(time);
-      speedEl.appendChild(rate);
-    }
+    const { speedTimeEl, speedRateEl } = item.elements;
+    const visible = item.status === 'generating' || item.status === 'generated';
+    speedTimeEl.hidden = !visible;
+    speedRateEl.hidden = !visible;
+    if (!visible) return;
+    speedTimeEl.textContent = formatHms(getItemElapsedMs(item));
+    speedRateEl.textContent = formatItemRate(item);
   }
 
   function renderItemActions(item) {
@@ -870,26 +854,16 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     renderItemActions(item);
   }
 
-  let convertingTickHandle = null;
-  function ensureConvertingTicker() {
-    const hasConverting = items.some((item) => item.status === 'generating');
-    if (hasConverting && !convertingTickHandle) {
-      convertingTickHandle = setInterval(() => {
-        items.forEach((item) => {
-          if (item.status === 'generating') renderItemSpeed(item);
-        });
-      }, 500);
-    } else if (!hasConverting && convertingTickHandle) {
-      clearInterval(convertingTickHandle);
-      convertingTickHandle = null;
-    }
-  }
-
   function setItemStatus(item, status, error = '') {
+    const previous = item.status;
     item.status = status;
     item.error = status === 'error' ? error : '';
+    if (status === 'generating') {
+      item.timer.start();
+    } else if (previous === 'generating') {
+      item.timer.stop();
+    }
     renderItem(item);
-    ensureConvertingTicker();
     updateGlobalControls();
   }
 
@@ -979,6 +953,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     const speedEl = document.createElement('div');
     speedEl.className = 'pdf-speed';
 
+    const speedTimeEl = document.createElement('div');
+    speedTimeEl.className = 'pdf-speed-line is-primary';
+    speedTimeEl.hidden = true;
+    const speedRateEl = document.createElement('div');
+    speedRateEl.className = 'pdf-speed-line';
+    speedRateEl.hidden = true;
+    speedEl.appendChild(speedTimeEl);
+    speedEl.appendChild(speedRateEl);
+
     const actions = document.createElement('div');
     actions.className = 'pdf-actions';
 
@@ -1018,10 +1001,19 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
       status: statusEl,
       progress: progressEl,
       speed: speedEl,
+      speedTimeEl,
+      speedRateEl,
       downloadBtn,
       compareBtn,
       deleteBtn,
     };
+    item.timer = ElapsedTimer.create({
+      element: speedTimeEl,
+      getElapsedMs: () => getItemElapsedMs(item),
+      onTick: () => {
+        speedRateEl.textContent = formatItemRate(item);
+      },
+    });
     items.push(item);
 
     downloadBtn.addEventListener('click', () => {
