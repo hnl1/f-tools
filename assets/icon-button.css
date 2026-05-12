@@ -7,7 +7,8 @@
 .icon-sun::before,
 .icon-moon::before,
 .icon-trash::before,
-.icon-close::before {
+.icon-close::before,
+.icon-minimize::before {
   content: "";
   display: inline-block;
   width: var(--icon-size, 1em);
@@ -29,6 +30,7 @@
 .icon-moon::before     { -webkit-mask-image: var(--icon-moon);     mask-image: var(--icon-moon); }
 .icon-trash::before    { -webkit-mask-image: var(--icon-trash);    mask-image: var(--icon-trash); }
 .icon-close::before    { -webkit-mask-image: var(--icon-close);    mask-image: var(--icon-close); }
+.icon-minimize::before { -webkit-mask-image: var(--icon-minimize); mask-image: var(--icon-minimize); }
 
 /* 图标按钮：纯图标的方形按钮组件（头部主页/主题/清空等场景）。
    配合任意 .icon-{name} class 使用，按钮只负责"按钮的样子"，图标由 .icon-{name} 负责。 */
