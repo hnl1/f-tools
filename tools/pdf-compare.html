@@ -289,7 +289,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     },
   });
 
-  loadTransferredPdfs();
+  loadPdfsFromUrl();
 
   function setDropStatus(message) {
     dropStatus.textContent = message;
@@ -301,13 +301,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     }
   }
 
-  function openTransferDb() {
+  function openPdfsDb() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('f-tools-pdf-transfer', 1);
+      const request = indexedDB.open('f-tools-pdfs', 1);
       request.onupgradeneeded = () => {
         const db = request.result;
-        if (!db.objectStoreNames.contains('transfers')) {
-          db.createObjectStore('transfers', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('pdfs')) {
+          db.createObjectStore('pdfs', { keyPath: 'id' });
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -315,12 +315,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     });
   }
 
-  async function getTransfer(id) {
-    const db = await openTransferDb();
+  async function getPdfs(id) {
+    const db = await openPdfsDb();
     try {
       return await new Promise((resolve, reject) => {
-        const tx = db.transaction('transfers', 'readonly');
-        const request = tx.objectStore('transfers').get(id);
+        const tx = db.transaction('pdfs', 'readonly');
+        const request = tx.objectStore('pdfs').get(id);
         request.onsuccess = () => resolve(request.result || null);
         request.onerror = () => reject(request.error);
       });
@@ -329,12 +329,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     }
   }
 
-  async function deleteTransfer(id) {
-    const db = await openTransferDb();
+  async function deletePdfs(id) {
+    const db = await openPdfsDb();
     try {
       await new Promise((resolve, reject) => {
-        const tx = db.transaction('transfers', 'readwrite');
-        tx.objectStore('transfers').delete(id);
+        const tx = db.transaction('pdfs', 'readwrite');
+        tx.objectStore('pdfs').delete(id);
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error);
@@ -344,15 +344,15 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     }
   }
 
-  async function loadTransferredPdfs() {
+  async function loadPdfsFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    const transferId = params.get('transfer');
-    if (!transferId) return;
+    const pdfsId = params.get('pdfs');
+    if (!pdfsId) return;
 
     setDropStatus('正在加载转换结果，将自动载入原始 PDF 和图片版 PDF');
 
     try {
-      const record = await getTransfer(transferId);
+      const record = await getPdfs(pdfsId);
       if (!record || !Array.isArray(record.files) || record.files.length === 0) {
         throw new Error('未找到转换结果，请回到 PDF 转图片页重新生成。');
       }
@@ -363,7 +363,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
         { type: entry.type || 'application/pdf' }
       ));
       await fileDropZone.acceptFiles(files);
-      await deleteTransfer(transferId);
+      await deletePdfs(pdfsId);
     } catch (err) {
       console.error(err);
       setDropStatus(`加载转换结果失败：${err && err.message ? err.message : err}`);

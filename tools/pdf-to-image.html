@@ -857,7 +857,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   function renderItemActions(item) {
     item.elements.deleteBtn.disabled = item.status === 'generating';
     item.elements.downloadBtn.disabled = !item.outputBlob;
-    item.elements.compareBtn.disabled = !item.compareUrl;
+    item.elements.compareBtn.disabled = !item.outputBlob;
   }
 
   function renderItem(item) {
@@ -1026,7 +1026,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
       if (item.outputBlob) downloadBlob(item.outputBlob, item.outputName);
     });
     compareBtn.addEventListener('click', () => {
-      if (item.compareUrl) window.open(item.compareUrl, '_blank', 'noopener');
+      openCompareForItem(item);
     });
     deleteBtn.addEventListener('click', () => removePdfItem(item));
     thumb.addEventListener('click', () => {
@@ -1275,13 +1275,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
   }
 
-  function openTransferDb() {
+  function openPdfsDb() {
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open('f-tools-pdf-transfer', 1);
+      const request = indexedDB.open('f-tools-pdfs', 1);
       request.onupgradeneeded = () => {
         const db = request.result;
-        if (!db.objectStoreNames.contains('transfers')) {
-          db.createObjectStore('transfers', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('pdfs')) {
+          db.createObjectStore('pdfs', { keyPath: 'id' });
         }
       };
       request.onsuccess = () => resolve(request.result);
@@ -1289,12 +1289,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     });
   }
 
-  async function putTransfer(record) {
-    const db = await openTransferDb();
+  async function putPdfs(record) {
+    const db = await openPdfsDb();
     try {
       await new Promise((resolve, reject) => {
-        const tx = db.transaction('transfers', 'readwrite');
-        tx.objectStore('transfers').put(record);
+        const tx = db.transaction('pdfs', 'readwrite');
+        tx.objectStore('pdfs').put(record);
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error);
@@ -1304,14 +1304,14 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     }
   }
 
-  function makeTransferId() {
+  function makePdfsId() {
     if (crypto && crypto.randomUUID) return crypto.randomUUID();
     return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
   async function storeForCompare(sourceFile, outputBlob, outputName) {
-    const id = makeTransferId();
-    await putTransfer({
+    const id = makePdfsId();
+    await putPdfs({
       id,
       createdAt: Date.now(),
       files: [
@@ -1327,7 +1327,21 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
         },
       ],
     });
-    return `pdf-compare.html?from=pdf-to-image.html&transfer=${encodeURIComponent(id)}`;
+    return `pdf-compare.html?from=pdf-to-image.html&pdfs=${encodeURIComponent(id)}`;
+  }
+
+  async function openCompareForItem(item) {
+    if (!item.outputBlob) return;
+    item.elements.compareBtn.disabled = true;
+    try {
+      const url = await storeForCompare(item.file, item.outputBlob, item.outputName);
+      window.open(url, '_blank', 'noopener');
+    } catch (error) {
+      console.error('open compare failed', error);
+      log('打开对比页失败：' + (error && error.message ? error.message : String(error)), true);
+    } finally {
+      item.elements.compareBtn.disabled = !item.outputBlob;
+    }
   }
 
   async function renderPageToImage(page, scale) {
@@ -1424,20 +1438,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     }
   }
 
-  async function saveGeneratedResultForCompare(item, blob) {
+  function saveGeneratedResult(item, blob) {
     item.outputBlob = blob;
     item.outputSize = blob.size;
     item.outputName = makeOutputName(item.file.name);
     item.outputPath = getPdfOutputPath(item.file, item.fileEntry, item.outputName);
-    item.compareUrl = '';
-
-    try {
-      item.compareUrl = await storeForCompare(item.file, blob, item.outputName);
-      return true;
-    } catch (error) {
-      console.warn('prepare compare transfer failed', error);
-      return false;
-    }
   }
 
   async function generateAll() {
@@ -1496,7 +1501,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
           }, () => false, (canvas) => setThumbnailFromCanvas(item, canvas));
           item.endedAt = Date.now();
           item.currentPage = item.pageCount || item.currentPage;
-          await saveGeneratedResultForCompare(item, blob);
+          saveGeneratedResult(item, blob);
           setItemStatus(item, 'generated');
         } catch (error) {
           console.error(error);
