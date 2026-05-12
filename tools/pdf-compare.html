@@ -285,7 +285,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     status: dropStatus,
     subject: 'PDF',
     onFiles(files) {
-      handleFiles(files);
+      return handleFiles(files);
     },
   });
 
@@ -362,7 +362,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
         entry.name || `转换结果-${index + 1}.pdf`,
         { type: entry.type || 'application/pdf' }
       ));
-      await handleFiles(files);
+      await fileDropZone.acceptFiles(files);
       await deleteTransfer(transferId);
     } catch (err) {
       console.error(err);

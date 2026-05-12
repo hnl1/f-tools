@@ -293,6 +293,7 @@
       const next = Boolean(value);
       if (next === hasItems) return;
       hasItems = next;
+      zone.hidden = hasItems;
       zone.classList.toggle('is-collapsed', hasItems);
       hideTriggerTooltip();
     }
@@ -330,7 +331,11 @@
       zone.classList.toggle('dragging', isDragging);
     }
 
-    function acceptFileEntries(fileEntries, source) {
+    function getSourceLabel(source) {
+      return sourceLabels[source] || source || sourceLabels.choose;
+    }
+
+    function acceptFileEntries(fileEntries, source, options = {}) {
       const incomingEntries = Array.from(fileEntries || []);
       const incoming = incomingEntries.map((entry) => entry.file);
       if (!incoming.length) return false;
@@ -338,28 +343,27 @@
       const acceptedEntries = incomingEntries.filter((entry) => matchesAccept(entry.file, accept));
       const entries = multiple ? acceptedEntries : acceptedEntries.slice(0, 1);
       const files = entries.map((entry) => entry.file);
+      const sourceLabel = getSourceLabel(source);
       if (!files.length) {
-        setStatus(typeof rejectedText === 'function' ? rejectedText(incoming, sourceLabels[source]) : rejectedText, true);
+        setStatus(typeof rejectedText === 'function' ? rejectedText(incoming, sourceLabel) : rejectedText, true);
         return false;
       }
 
-      const message = typeof acceptedText === 'function'
-        ? acceptedText(files, sourceLabels[source])
-        : acceptedText;
-      if (message) setStatus(message, false);
-      onFiles(files, {
+      setStatus('', false);
+      setHasItems(true);
+      const result = onFiles(files, {
         source,
-        sourceLabel: sourceLabels[source],
+        sourceLabel,
         allFiles: incoming,
         allFileEntries: incomingEntries,
         fileEntries: entries,
         fileTree: buildFileTree(entries),
       });
-      return true;
+      return options.returnHandlerResult ? result : true;
     }
 
-    function acceptFiles(fileList, source) {
-      return acceptFileEntries(createFileEntries(fileList), source);
+    function acceptFiles(fileList, source = 'choose') {
+      return acceptFileEntries(createFileEntries(fileList), source, { returnHandlerResult: true });
     }
 
     input.addEventListener('change', () => {
@@ -591,6 +595,7 @@
     if (emptyText) setStatus(emptyText, false);
 
     return {
+      acceptFiles,
       setStatus,
       setHasItems,
       clear() {
