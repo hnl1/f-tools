@@ -278,16 +278,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
   loadPdfsFromUrl();
 
-  function setDropStatus(message) {
-    dropStatus.textContent = message;
-    dropStatus.hidden = !message;
-    if (message) {
-      dropHint.setAttribute('aria-describedby', dropStatus.id);
-    } else {
-      dropHint.removeAttribute('aria-describedby');
-    }
-  }
-
   function openPdfsDb() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open('f-tools-pdfs', 1);
@@ -331,17 +321,21 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     }
   }
 
+  function clearUrlParams() {
+    const url = new URL(window.location.href);
+    window.history.replaceState(null, '', url.pathname);
+  }
+
   async function loadPdfsFromUrl() {
     const params = new URLSearchParams(window.location.search);
     const pdfsId = params.get('pdfs');
+    if (window.location.search || window.location.hash) clearUrlParams();
     if (!pdfsId) return;
-
-    setDropStatus('正在加载转换结果，将自动载入原始 PDF 和图片版 PDF');
 
     try {
       const record = await getPdfs(pdfsId);
       if (!record || !Array.isArray(record.files) || record.files.length === 0) {
-        throw new Error('未找到转换结果，请回到 PDF 转图片页重新生成。');
+        return;
       }
 
       const files = record.files.map((entry, index) => new File(
@@ -353,7 +347,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
       await deletePdfs(pdfsId);
     } catch (err) {
       console.error(err);
-      setDropStatus(`加载转换结果失败：${err && err.message ? err.message : err}`);
     }
   }
 

@@ -362,6 +362,8 @@ test("shared file input script supports drop zone triggers", () => {
   assert.match(script, /setAttribute\('role', 'button'\)/);
   assert.match(script, /addEventListener\('keydown'/);
   assert.doesNotMatch(script, /const button = toElement\(options\.button\)/);
+  assert.doesNotMatch(script, /options\.(?:emptyText|acceptedText|rejectedText|onStatus)/);
+  assert.doesNotMatch(script, /\bsetStatus,\s*\n/);
 });
 
 test("shared file input script supports directory picking", () => {

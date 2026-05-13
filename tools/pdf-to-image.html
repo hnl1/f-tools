@@ -1321,7 +1321,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
         },
       ],
     });
-    return `pdf-compare.html?from=pdf-to-image.html&pdfs=${encodeURIComponent(id)}`;
+    return `pdf-compare.html?pdfs=${encodeURIComponent(id)}`;
   }
 
   async function openCompareForItem(item) {

@@ -142,11 +142,6 @@
       });
   }
 
-  function summarizeFiles(files) {
-    if (files.length === 1) return files[0].name || '已选择 1 个文件';
-    return `已选择 ${files.length} 个文件`;
-  }
-
   function supportsDirectoryInput() {
     const probe = document.createElement('input');
     probe.type = 'file';
@@ -218,9 +213,6 @@
     const accept = options.accept || (input && input.accept) || '';
     const multiple = options.multiple != null ? options.multiple : Boolean(input && input.multiple);
     const subject = options.subject || '';
-    const emptyText = options.emptyText || '';
-    const acceptedText = options.acceptedText || summarizeFiles;
-    const rejectedText = options.rejectedText || formatRejectedText(subject);
     const allowDirectories = options.allowDirectories !== false && supportsDirectoryInput();
 
     if (!zone || !input || typeof onFiles !== 'function') {
@@ -324,7 +316,6 @@
           zone.removeAttribute('aria-describedby');
         }
       }
-      if (typeof options.onStatus === 'function') options.onStatus(message, Boolean(isError));
     }
 
     function setDragging(isDragging) {
@@ -345,7 +336,7 @@
       const files = entries.map((entry) => entry.file);
       const sourceLabel = getSourceLabel(source);
       if (!files.length) {
-        setStatus(typeof rejectedText === 'function' ? rejectedText(incoming, sourceLabel) : rejectedText, true);
+        setStatus(formatRejectedText(subject), true);
         return false;
       }
 
@@ -592,15 +583,12 @@
       }
     });
 
-    if (emptyText) setStatus(emptyText, false);
-
     return {
       acceptFiles,
-      setStatus,
       setHasItems,
       clear() {
         input.value = '';
-        setStatus(emptyText, false);
+        setStatus('', false);
         setHasItems(false);
       },
     };
