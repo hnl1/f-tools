@@ -65,16 +65,6 @@
     display: flex;
     flex-direction: column;
   }
-  .tool-header label {
-    font-size: 12px;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex: 0 0 auto;
-    cursor: pointer;
-  }
-
   #drop-hint {
     flex: 1 1 auto;
     margin: 40px;
@@ -198,17 +188,80 @@
   }
 </style>
 <link rel="stylesheet" href="../assets/common.css">
+<style>
+  /* 写在 common.css 之后，避免工具页全局 button 样式给菜单项加描边/圆角/阴影 */
+  .sync-menu {
+    position: fixed;
+    z-index: 40;
+    display: grid;
+    gap: 0;
+    min-width: 132px;
+    padding: 4px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--tool-button-radius);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  }
+  .sync-menu[hidden] { display: none; }
+  body.tool-page .sync-menu button:not(.icon-btn) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: var(--tool-button-padding-block) var(--tool-button-padding-inline);
+    color: var(--text);
+    font-size: var(--tool-button-font-size);
+    line-height: var(--tool-button-line-height);
+    text-align: left;
+    white-space: nowrap;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transition: background var(--ft-transition);
+  }
+  body.tool-page .sync-menu button:not(.icon-btn):not(:disabled):hover,
+  body.tool-page .sync-menu button:not(.icon-btn):focus-visible {
+    outline: 0;
+    background: var(--surface-hover);
+    border-color: transparent;
+  }
+  .sync-menu button .label { flex: 1; }
+  .sync-menu button .check {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--accent);
+    opacity: 0;
+  }
+  .sync-menu button[aria-checked="true"] .check { opacity: 1; }
+  #sync-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #sync-btn .sync-btn-label { flex: 0 1 auto; }
+  #sync-btn .sync-btn-chevron {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+    transition: transform var(--ft-transition);
+  }
+  #sync-btn[aria-expanded="true"] .sync-btn-chevron {
+    transform: rotate(180deg);
+  }
+</style>
 </head>
 <body class="tool-page">
 <div id="header-controls" hidden>
-  <label title="同步滚动方式">
-    同步
-    <select id="sync-mode">
-      <option value="ratio">按比例</option>
-      <option value="page">按页码</option>
-      <option value="off">关闭</option>
-    </select>
-  </label>
+  <button id="sync-btn" type="button" title="同步滚动方式" aria-haspopup="menu" aria-expanded="false">
+    <span class="sync-btn-label">按比例同步</span>
+    <svg class="sync-btn-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m7 10 5 5 5-5"/>
+    </svg>
+  </button>
   <button id="add-btn" type="button">添加 PDF</button>
   <input type="file" id="file-input" class="visually-hidden-file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
 </div>
@@ -248,17 +301,95 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   const addBtn = document.getElementById('add-btn');
   const fileInput = document.getElementById('file-input');
   const dropStatus = document.getElementById('pdf-drop-status');
-  const syncModeSel = document.getElementById('sync-mode');
+  const syncBtn = document.getElementById('sync-btn');
   let fileDropZone = null;
 
   /** @type {{name:string, file:File, pdf:any, col:HTMLElement, scroller:HTMLElement, pagesEl:HTMLElement, pageEls:HTMLElement[], pageOffsets:number[], numPages:number}[]} */
   let items = [];
 
   const RENDER_SCALE = 4;
-  let syncMode = syncModeSel.value;
+  const SYNC_MODES = [
+    { value: 'ratio', label: '按比例同步' },
+    { value: 'page', label: '按页码同步' },
+    { value: 'off', label: '关闭同步' },
+  ];
+  let syncMode = 'ratio';
   let isSyncing = false;
 
-  syncModeSel.addEventListener('change', () => { syncMode = syncModeSel.value; });
+  setupSyncMenu();
+
+  function setupSyncMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'sync-menu';
+    menu.hidden = true;
+    menu.setAttribute('role', 'menu');
+    const btns = SYNC_MODES.map(opt => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('role', 'menuitemradio');
+      b.dataset.value = opt.value;
+      const labelEl = document.createElement('span');
+      labelEl.className = 'label';
+      labelEl.textContent = opt.label;
+      b.appendChild(labelEl);
+      b.insertAdjacentHTML('beforeend',
+        '<svg class="check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8 3.5 3.5L13 5"/></svg>');
+      b.addEventListener('click', () => {
+        setSyncMode(opt.value);
+        closeMenu();
+      });
+      menu.appendChild(b);
+      return b;
+    });
+    document.body.appendChild(menu);
+
+    function syncCheckedState() {
+      btns.forEach(b => b.setAttribute('aria-checked', b.dataset.value === syncMode ? 'true' : 'false'));
+    }
+    function positionMenu() {
+      const rect = syncBtn.getBoundingClientRect();
+      menu.style.minWidth = `${Math.round(rect.width)}px`;
+      menu.style.left = `${Math.round(rect.left)}px`;
+      menu.style.top = `${Math.round(rect.bottom + 4)}px`;
+    }
+    function openMenu() {
+      syncCheckedState();
+      menu.hidden = false;
+      positionMenu();
+      syncBtn.setAttribute('aria-expanded', 'true');
+      document.addEventListener('mousedown', onDocDown, true);
+      document.addEventListener('keydown', onKey, true);
+      window.addEventListener('resize', positionMenu);
+      window.addEventListener('scroll', positionMenu, true);
+    }
+    function closeMenu() {
+      menu.hidden = true;
+      syncBtn.setAttribute('aria-expanded', 'false');
+      document.removeEventListener('mousedown', onDocDown, true);
+      document.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('resize', positionMenu);
+      window.removeEventListener('scroll', positionMenu, true);
+    }
+    function onDocDown(e) {
+      if (menu.contains(e.target) || syncBtn.contains(e.target)) return;
+      closeMenu();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { closeMenu(); syncBtn.focus(); }
+    }
+    syncBtn.addEventListener('click', () => {
+      if (menu.hidden) openMenu(); else closeMenu();
+    });
+  }
+
+  function setSyncMode(value) {
+    syncMode = value;
+    const opt = SYNC_MODES.find(o => o.value === value);
+    if (opt) {
+      const lab = syncBtn.querySelector('.sync-btn-label');
+      if (lab) lab.textContent = opt.label;
+    }
+  }
 
   function updateClearBtn() {
     clearBtn.setCount(items.length);
