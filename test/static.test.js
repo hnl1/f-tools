@@ -137,23 +137,110 @@ test("pdf to image hides advanced output options", () => {
 
 test("pdf to image displays directory paths for folder imports", () => {
   const html = read("tools/pdf-to-image.html");
+  const utils = read("assets/pdf-to-image-utils.js");
 
-  assert.match(html, /function getDisplayPathSeparator\(\)/);
-  assert.match(html, /function getPdfDisplayName\(file, fileEntry\)/);
-  assert.match(html, /function getPdfOutputPath\(file, fileEntry, outputName\)/);
-  assert.match(html, /relativePath\.split\('\/'\)\.filter\(Boolean\)\.join\(getDisplayPathSeparator\(\)\)/);
+  assert.match(utils, /export function getDisplayPathSeparator\(/);
+  assert.match(utils, /export function getPdfDisplayName\(/);
+  assert.match(utils, /export function getPdfOutputPath\(/);
+  assert.match(utils, /relativePath\.split\('\/'\)\.filter\(Boolean\)\.join\(getDisplayPathSeparator\b/);
   assert.match(html, /addPdfFiles\(files, detail\.sourceLabel, detail\.fileEntries\)/);
 });
 
 test("pdf to image zips multiple generated downloads with paths", () => {
   const html = read("tools/pdf-to-image.html");
+  const utils = read("assets/pdf-to-image-utils.js");
 
-  assert.match(html, /async function createZipBlob\(entries\)/);
+  assert.match(utils, /export async function createZipBlob\(/);
   assert.match(html, /async function downloadAllGenerated\(\)/);
   assert.match(html, /generatedItems\.length === 1/);
   assert.match(html, /downloadBlob\(item\.outputBlob, item\.outputName\)/);
   assert.match(html, /path:\s*item\.outputPath \|\| item\.outputName/);
   assert.match(html, /pdf-to-image-results\.zip/);
+});
+
+test("pdf to image keeps drop zone and pdf list as direct children of <main>", () => {
+  const html = read("tools/pdf-to-image.html");
+  const main = html.match(/<main[\s\S]*?<\/main>/)?.[0] ?? "";
+
+  assert.ok(main, "pdf-to-image should have a <main> region");
+  assert.doesNotMatch(main, /class="[^"]*\bupload-panel\b/, "should not wrap drop zone in .upload-panel");
+  assert.doesNotMatch(main, /<div class="form"\b/, "should not wrap drop zone in a .form container");
+  assert.match(
+    main,
+    /<main[^>]*>\s*(?:<div[^>]+id="foreground-hint"[^>]*>[\s\S]*?<\/div>\s*)?<div[^>]+id="drop-hint"/,
+    "#drop-hint should be a direct child of <main>"
+  );
+  assert.match(
+    main,
+    /<div[^>]+id="pdf-list"[^>]*\bhidden\b[^>]*>\s*<\/div>\s*<\/main>/,
+    "#pdf-list should be a direct child of <main> and start hidden"
+  );
+});
+
+test("pdf to image styles guard against the [hidden] override pitfall", () => {
+  const html = read("tools/pdf-to-image.html");
+
+  assert.doesNotMatch(
+    html,
+    /min-height:\s*calc\(\s*100vh\s*-\s*144px\s*\)/,
+    "no hardcoded min-height: calc(100vh - 144px)"
+  );
+  assert.doesNotMatch(
+    html,
+    /\.panel\.upload-panel\s*\{[^}]*background:\s*transparent/,
+    "no .panel.upload-panel reset block"
+  );
+
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+  assert.ok(styleMatch, "should have a <style> block");
+  const css = styleMatch[1];
+  const declaresPdfListDisplay = /\.pdf-list\s*\{[^}]*\bdisplay\s*:/.test(css);
+  if (declaresPdfListDisplay) {
+    const hasHiddenFallback =
+      /\.pdf-list\[hidden\]\s*\{[^}]*display\s*:\s*none/.test(css) ||
+      /\.pdf-list:not\(\[hidden\]\)\s*\{[^}]*\bdisplay\s*:/.test(css);
+    assert.ok(
+      hasHiddenFallback,
+      ".pdf-list sets display, so it must also handle [hidden] (either .pdf-list[hidden] { display: none } or .pdf-list:not([hidden]) { display: ... })"
+    );
+  }
+});
+
+test("pdf to image utils module exposes pure helpers and is loaded by the page", () => {
+  const utilsPath = "assets/pdf-to-image-utils.js";
+  assert.ok(existsSync(path.join(root, utilsPath)), `${utilsPath} should exist`);
+  const utils = read(utilsPath);
+  for (const name of [
+    "isPdfFile",
+    "makeOutputName",
+    "getDisplayPathSeparator",
+    "getPdfDisplayName",
+    "getPdfOutputPath",
+    "formatFileSize",
+    "formatHms",
+    "formatDuration",
+    "calculateCrc32",
+    "createZipBlob",
+  ]) {
+    assert.match(utils, new RegExp(`export[^\\n]+\\b${name}\\b`), `${utilsPath} should export ${name}`);
+  }
+
+  const html = read("tools/pdf-to-image.html");
+  assert.match(
+    html,
+    /<script\s+type="module">[\s\S]*from\s+['"]\.\.\/assets\/pdf-to-image-utils\.js['"]/,
+    "pdf-to-image.html should import the utils module"
+  );
+  assert.doesNotMatch(
+    html,
+    /\bfunction\s+formatFileSize\b/,
+    "pdf-to-image.html should not redeclare formatFileSize inline"
+  );
+  assert.doesNotMatch(
+    html,
+    /\bfunction\s+calculateCrc32\b/,
+    "pdf-to-image.html should not redeclare calculateCrc32 inline"
+  );
 });
 
 test("pdf to image uses the shared upload prompt", () => {

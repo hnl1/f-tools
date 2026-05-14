@@ -101,25 +101,12 @@
     background: var(--button-hover);
   }
   main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     width: 100%;
     margin: 0;
     padding: 0;
-  }
-  body.tool-page .panel.upload-panel {
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    overflow: visible;
-  }
-  .panel {
-    align-self: start;
-  }
-  .form {
-    padding: 40px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
   }
   label {
     display: flex;
@@ -139,16 +126,8 @@
     gap: 12px;
   }
   .file-drop-zone {
-    min-height: calc(100vh - 144px);
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 60px;
-    text-align: center;
-    font-size: 18px;
+    flex: 1 1 auto;
+    margin: 40px;
   }
   input[type="file"],
   input[type="number"],
@@ -193,12 +172,13 @@
   .pdf-list {
     display: flex;
     flex-direction: column;
+    margin: 0 40px 40px;
+  }
+  .pdf-list[hidden] {
+    display: none;
   }
   .pdf-item + .pdf-item {
     border-top: 1px solid var(--border);
-  }
-  body.tool-page main:has(.upload-panel) {
-    flex-direction: column;
   }
   body.tool-page .tool-header .bulk-progress {
     flex: 1 1 auto;
@@ -528,33 +508,40 @@
     <span>提示：请尽量保持此页面在前台，否则浏览器可能降低处理速度。</span>
   </div>
 
-  <section class="panel upload-panel">
-    <div class="form">
-      <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="pdf-to-image-drop-title">
-        <input id="pdf-file" class="visually-hidden-file" type="file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
-        <div class="file-drop-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 4v12"></path>
-            <path d="m7 9 5-5 5 5"></path>
-            <path d="M5 18v2h14v-2"></path>
-          </svg>
-        </div>
-        <div>
-          <div id="pdf-to-image-drop-title" class="file-drop-title"></div>
-        </div>
-        <div id="pdf-to-image-drop-status" class="file-drop-status" hidden></div>
-      </div>
-
-      <div id="pdf-list" class="pdf-list" aria-live="polite">
-      </div>
+  <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="pdf-to-image-drop-title">
+    <input id="pdf-file" class="visually-hidden-file" type="file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
+    <div class="file-drop-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 4v12"></path>
+        <path d="m7 9 5-5 5 5"></path>
+        <path d="M5 18v2h14v-2"></path>
+      </svg>
     </div>
-  </section>
+    <div>
+      <div id="pdf-to-image-drop-title" class="file-drop-title"></div>
+    </div>
+    <div id="pdf-to-image-drop-status" class="file-drop-status" hidden></div>
+  </div>
+
+  <div id="pdf-list" class="pdf-list" aria-live="polite" hidden></div>
 </main>
 
 <script src="../vendor/pdfjs/pdf.min.js"></script>
 <script src="../vendor/jspdf/jspdf.umd.min.js"></script>
 <script src="../assets/file-input.js"></script>
-<script>
+<script type="module">
+import {
+  isPdfFile,
+  makeOutputName,
+  getDisplayPathSeparator,
+  getPdfDisplayName,
+  getPdfOutputPath,
+  formatFileSize,
+  formatHms,
+  formatDuration,
+  createZipBlob,
+} from '../assets/pdf-to-image-utils.js';
+
 pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
 (() => {
@@ -600,18 +587,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     if (!logEl) return;
     logEl.textContent = message;
     logEl.classList.toggle('error', isError);
-  }
-
-  function isPdfFile(file) {
-    return Boolean(file) && (
-      file.type === 'application/pdf' ||
-      /\.pdf$/i.test(file.name || '')
-    );
-  }
-
-  function makeOutputName(fileName) {
-    const baseName = (fileName || 'converted').replace(/\.pdf$/i, '');
-    return `${baseName}-images.pdf`;
   }
 
   function updateGlobalControls() {
@@ -663,17 +638,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     bulkProgress.hidden = true;
   }
 
-  function formatDuration(milliseconds) {
-    const totalSeconds = Math.max(0, Math.round(milliseconds / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    if (!minutes) return `${seconds}s`;
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    if (!hours) return `${minutes}m ${seconds}s`;
-    return `${hours}h ${remainingMinutes}m ${seconds}s`;
-  }
-
   function renderBulkProgress() {
     const total = items.length;
     if (!total) {
@@ -719,22 +683,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
 
   const DOWNLOAD_ICON_SVG = '<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   const COMPARE_ICON_SVG = '<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>';
-
-  function formatFileSize(bytes) {
-    if (!Number.isFinite(bytes) || bytes < 0) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  }
-
-  function formatHms(milliseconds) {
-    const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }
 
   const STATUS_LABELS = {
     pending: '排队中',
@@ -867,22 +815,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     updateGlobalControls();
   }
 
-  function getDisplayPathSeparator() {
-    return /Win/i.test(navigator.platform || navigator.userAgent || '') ? '\\' : '/';
-  }
-
-  function getPdfDisplayName(file, fileEntry) {
-    const relativePath = fileEntry && fileEntry.relativePath;
-    if (!relativePath || relativePath === file.name) return file.name || '未命名 PDF';
-    return relativePath.split('/').filter(Boolean).join(getDisplayPathSeparator());
-  }
-
-  function getPdfOutputPath(file, fileEntry, outputName) {
-    const relativePath = fileEntry && fileEntry.relativePath;
-    if (!relativePath || relativePath === file.name) return outputName;
-    const parts = relativePath.split('/').filter(Boolean);
-    parts[parts.length - 1] = outputName;
-    return parts.join('/');
+  function getCurrentPlatform() {
+    return navigator.platform || navigator.userAgent || '';
   }
 
   function addPdfFiles(files, sourceLabel, fileEntries = []) {
@@ -900,7 +834,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
   }
 
   function addPdfItem(file, fileEntry) {
-    const displayName = getPdfDisplayName(file, fileEntry);
+    const displayName = getPdfDisplayName(file, fileEntry, getCurrentPlatform());
     const outputName = makeOutputName(file.name);
     const item = {
       id: `pdf-item-${nextItemId++}`,
@@ -1125,148 +1059,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-  }
-
-  const ZIP_MAX_32BIT_SIZE = 0xffffffff;
-  let crc32Table = null;
-
-  function getCrc32Table() {
-    if (crc32Table) return crc32Table;
-    crc32Table = new Uint32Array(256);
-    for (let index = 0; index < 256; index += 1) {
-      let value = index;
-      for (let bit = 0; bit < 8; bit += 1) {
-        value = (value & 1) ? (0xedb88320 ^ (value >>> 1)) : (value >>> 1);
-      }
-      crc32Table[index] = value >>> 0;
-    }
-    return crc32Table;
-  }
-
-  function calculateCrc32(buffer) {
-    const table = getCrc32Table();
-    const bytes = new Uint8Array(buffer);
-    let crc = 0xffffffff;
-    for (let index = 0; index < bytes.length; index += 1) {
-      crc = table[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
-    }
-    return (crc ^ 0xffffffff) >>> 0;
-  }
-
-  function getZipDateTime(date = new Date()) {
-    const year = Math.max(1980, date.getFullYear());
-    return {
-      time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
-      date: ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
-    };
-  }
-
-  function normalizeZipPath(value, fallbackName) {
-    const path = String(value || fallbackName || 'converted.pdf')
-      .replace(/\\/g, '/')
-      .split('/')
-      .filter((part) => part && part !== '.' && part !== '..')
-      .join('/');
-    return path || fallbackName || 'converted.pdf';
-  }
-
-  function makeUniqueZipPaths(entries) {
-    const seen = new Map();
-    return entries.map((entry) => {
-      const normalizedPath = normalizeZipPath(entry.path, entry.name);
-      const count = seen.get(normalizedPath) || 0;
-      seen.set(normalizedPath, count + 1);
-      if (!count) return Object.assign({}, entry, { path: normalizedPath });
-
-      const slashIndex = normalizedPath.lastIndexOf('/');
-      const directory = slashIndex >= 0 ? normalizedPath.slice(0, slashIndex + 1) : '';
-      const fileName = slashIndex >= 0 ? normalizedPath.slice(slashIndex + 1) : normalizedPath;
-      const dotIndex = fileName.lastIndexOf('.');
-      const baseName = dotIndex > 0 ? fileName.slice(0, dotIndex) : fileName;
-      const extension = dotIndex > 0 ? fileName.slice(dotIndex) : '';
-      return Object.assign({}, entry, {
-        path: `${directory}${baseName} (${count + 1})${extension}`,
-      });
-    });
-  }
-
-  function createLocalFileHeader(nameBytes, crc32, size, zipTime, zipDate) {
-    const header = new Uint8Array(30 + nameBytes.length);
-    const view = new DataView(header.buffer);
-    view.setUint32(0, 0x04034b50, true);
-    view.setUint16(4, 20, true);
-    view.setUint16(6, 0x0800, true);
-    view.setUint16(8, 0, true);
-    view.setUint16(10, zipTime, true);
-    view.setUint16(12, zipDate, true);
-    view.setUint32(14, crc32, true);
-    view.setUint32(18, size, true);
-    view.setUint32(22, size, true);
-    view.setUint16(26, nameBytes.length, true);
-    view.setUint16(28, 0, true);
-    header.set(nameBytes, 30);
-    return header;
-  }
-
-  function createCentralDirectoryHeader(nameBytes, crc32, size, offset, zipTime, zipDate) {
-    const header = new Uint8Array(46 + nameBytes.length);
-    const view = new DataView(header.buffer);
-    view.setUint32(0, 0x02014b50, true);
-    view.setUint16(4, 20, true);
-    view.setUint16(6, 20, true);
-    view.setUint16(8, 0x0800, true);
-    view.setUint16(10, 0, true);
-    view.setUint16(12, zipTime, true);
-    view.setUint16(14, zipDate, true);
-    view.setUint32(16, crc32, true);
-    view.setUint32(20, size, true);
-    view.setUint32(24, size, true);
-    view.setUint16(28, nameBytes.length, true);
-    view.setUint16(30, 0, true);
-    view.setUint16(32, 0, true);
-    view.setUint16(34, 0, true);
-    view.setUint16(36, 0, true);
-    view.setUint32(38, 0, true);
-    view.setUint32(42, offset, true);
-    header.set(nameBytes, 46);
-    return header;
-  }
-
-  async function createZipBlob(entries) {
-    const encoder = new TextEncoder();
-    const localParts = [];
-    const centralParts = [];
-    const zipEntries = makeUniqueZipPaths(entries);
-    let offset = 0;
-
-    for (const entry of zipEntries) {
-      const blob = entry.blob;
-      if (blob.size > ZIP_MAX_32BIT_SIZE || offset > ZIP_MAX_32BIT_SIZE) {
-        throw new Error('ZIP 文件过大，浏览器端暂不支持超过 4GB 的打包。');
-      }
-
-      const nameBytes = encoder.encode(entry.path);
-      const { time, date } = getZipDateTime();
-      const crc32 = calculateCrc32(await blob.arrayBuffer());
-      const localHeader = createLocalFileHeader(nameBytes, crc32, blob.size, time, date);
-      const centralHeader = createCentralDirectoryHeader(nameBytes, crc32, blob.size, offset, time, date);
-
-      localParts.push(localHeader, blob);
-      centralParts.push(centralHeader);
-      offset += localHeader.byteLength + blob.size;
-    }
-
-    const centralDirectorySize = centralParts.reduce((total, part) => total + part.byteLength, 0);
-    const end = new Uint8Array(22);
-    const view = new DataView(end.buffer);
-    view.setUint32(0, 0x06054b50, true);
-    view.setUint16(8, zipEntries.length, true);
-    view.setUint16(10, zipEntries.length, true);
-    view.setUint32(12, centralDirectorySize, true);
-    view.setUint32(16, offset, true);
-    view.setUint16(20, 0, true);
-
-    return new Blob([...localParts, ...centralParts, end], { type: 'application/zip' });
   }
 
   function openPdfsDb() {
