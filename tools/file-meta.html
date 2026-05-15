@@ -25,14 +25,13 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 24px;
-    gap: 24px;
     min-height: 0;
   }
 
   /* Drop zone fills the available area when no file is loaded. */
   #drop-hint {
-    flex: 1;
+    flex: 1 1 auto;
+    margin: 40px;
     align-self: stretch;
     min-height: 0;
   }
@@ -41,13 +40,17 @@
     display: none;
     flex-direction: column;
     gap: 20px;
+    margin: 40px;
   }
   #meta-list.active { display: flex; }
 
   .meta-card {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "head    preview"
+      "body    preview";
+    column-gap: 24px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--ft-radius-lg);
@@ -56,6 +59,7 @@
   }
 
   .meta-card-head {
+    grid-area: head;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -82,9 +86,105 @@
   .meta-card.has-error .meta-card-head .name {
     color: var(--danger, #dc2626);
   }
+  .meta-card-body {
+    grid-area: body;
+    padding-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
   .meta-card .error-text {
     font-size: 14px;
     color: var(--danger, #dc2626);
+  }
+
+  .preview {
+    grid-area: preview;
+    align-self: start;
+    width: 280px;
+    max-width: 35vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--ft-radius-md);
+    padding: 8px;
+    overflow: hidden;
+  }
+  .preview img {
+    max-width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    display: block;
+    cursor: zoom-in;
+    border-radius: 4px;
+    /* 棋盘格背景，便于看出透明区域 */
+    background-color: #fff;
+    background-image:
+      linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+      linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  }
+
+  /* 窄屏退化为纵向布局，避免预览挤压元信息 */
+  @media (max-width: 720px) {
+    .meta-card {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        "head"
+        "preview"
+        "body";
+      row-gap: 16px;
+    }
+    .preview {
+      width: 100%;
+      max-width: 100%;
+      justify-self: stretch;
+    }
+  }
+
+  /* Lightbox */
+  #lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    z-index: 100;
+    cursor: zoom-out;
+  }
+  #lightbox.active { display: flex; }
+  #lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+    background-color: #fff;
+    background-image:
+      linear-gradient(45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(-45deg, #e5e7eb 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #e5e7eb 75%),
+      linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 0 12px, 12px -12px, -12px 0;
+  }
+  #lightbox-caption {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 16px;
+    text-align: center;
+    color: #f1f5f9;
+    font-size: 13px;
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   }
 
   .meta-section {
@@ -165,6 +265,11 @@
   <section id="meta-list" aria-live="polite"></section>
 </main>
 
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="图片预览">
+  <img id="lightbox-img" alt="">
+  <div id="lightbox-caption"></div>
+</div>
+
 <script src="../assets/file-input.js"></script>
 <script>
 (() => {
@@ -183,6 +288,27 @@
   const metaList = document.getElementById('meta-list');
 
   let cardCount = 0;
+  /** @type {string[]} */
+  const objectUrls = [];
+
+  // Lightbox 单例
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+  const lightboxCaption = document.getElementById('lightbox-caption');
+  function openLightbox(url, caption) {
+    lightboxImg.src = url;
+    lightboxImg.alt = caption || '';
+    lightboxCaption.textContent = caption || '';
+    lightbox.classList.add('active');
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('active');
+    lightboxImg.removeAttribute('src');
+  }
+  lightbox.addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lightbox.classList.contains('active')) closeLightbox();
+  });
 
   const fileDropZone = FileInputDropZone.bind({
     zone: dropHint,
@@ -224,12 +350,17 @@
     metaList.innerHTML = '';
     metaList.classList.remove('active');
     cardCount = 0;
+    objectUrls.splice(0).forEach((u) => URL.revokeObjectURL(u));
+    closeLightbox();
     fileDropZone.clear();
     clearBtn.setCount(0);
   }
 
   async function addPngCard(file) {
     cardCount += 1;
+    const url = URL.createObjectURL(file);
+    objectUrls.push(url);
+
     const card = document.createElement('article');
     card.className = 'meta-card';
     const head = el('header', { class: 'meta-card-head' },
@@ -237,6 +368,17 @@
       el('span', { class: 'name', text: file.name }),
     );
     card.appendChild(head);
+
+    const preview = el('div', { class: 'preview' });
+    const previewImg = document.createElement('img');
+    previewImg.alt = `${file.name} 预览`;
+    previewImg.title = '点击查看大图';
+    previewImg.loading = 'lazy';
+    previewImg.src = url;
+    previewImg.addEventListener('click', () => openLightbox(url, file.name));
+    preview.appendChild(previewImg);
+    card.appendChild(preview);
+
     const body = el('div', { class: 'meta-card-body' });
     card.appendChild(body);
     metaList.appendChild(card);
