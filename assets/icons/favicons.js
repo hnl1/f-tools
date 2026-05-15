@@ -6,6 +6,7 @@
     'tools/image-compare.html': '🖼️',
     'tools/pdf-compare.html': '📄',
     'tools/pdf-to-image.html': '🧾',
+    'tools/file-meta.html': '🏷️',
     'tools/icons.html': '🎨',
   };
 

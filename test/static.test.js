@@ -12,6 +12,7 @@ const toolPages = [
   "tools/image-compare.html",
   "tools/pdf-compare.html",
   "tools/pdf-to-image.html",
+  "tools/file-meta.html",
 ];
 const hiddenPages = [
   "tools/icons.html",
@@ -22,12 +23,14 @@ const fileInputPages = [
   "tools/image-compare.html",
   "tools/pdf-compare.html",
   "tools/pdf-to-image.html",
+  "tools/file-meta.html",
 ];
 const fileInputSupportText = {
   "tools/video-compare.html": "支持常见视频格式",
   "tools/image-compare.html": "支持常见图片格式",
   "tools/pdf-compare.html": "支持 PDF 文件",
   "tools/pdf-to-image.html": "支持 PDF 文件",
+  "tools/file-meta.html": "支持 PNG 文件",
 };
 const pages = ["index.html", ...secondaryPages, ...toolPages, ...hiddenPages];
 
