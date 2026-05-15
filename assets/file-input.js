@@ -192,6 +192,12 @@
     menuButton.setAttribute('aria-expanded', 'false');
     menuButton.setAttribute('aria-label', `${triggerButton.textContent.trim() || '添加文件'} 选项`);
     menuButton.addEventListener('click', onMenuClick);
+
+    const chevron = document.createElement('span');
+    chevron.className = 'file-input-trigger-menu__chevron icon-chevron-down';
+    chevron.setAttribute('aria-hidden', 'true');
+    menuButton.appendChild(chevron);
+
     wrapper.appendChild(menuButton);
 
     return menuButton;

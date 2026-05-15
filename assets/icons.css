@@ -6,4 +6,10 @@
   --icon-trash: url("./icons/trash.svg");
   --icon-close: url("./icons/close.svg");
   --icon-minimize: url("./icons/minimize.svg");
+  --icon-chevron-down: url("./icons/chevron-down.svg");
+  --icon-menu-check: url("./icons/menu-check.svg");
+  --icon-file-drop: url("./icons/file-drop.svg");
+  --icon-download: url("./icons/download.svg");
+  --icon-compare-split: url("./icons/compare-split.svg");
+  --icon-hint-info: url("./icons/hint-info.svg");
 }

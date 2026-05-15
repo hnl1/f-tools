@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -353,7 +353,7 @@ test("shared icon definitions live in the icon stylesheet", () => {
 });
 
 test("favicon config covers every page and is loaded by every page", () => {
-  const scriptPath = "assets/favicons.js";
+  const scriptPath = "assets/icons/favicons.js";
   assert.ok(existsSync(path.join(root, scriptPath)), `${scriptPath} should exist`);
 
   const sandbox = { window: {} };
@@ -376,7 +376,7 @@ test("favicon config covers every page and is loaded by every page", () => {
 
   for (const page of pages) {
     const html = read(page);
-    const expectedSrc = page === "index.html" ? "assets/favicons.js" : "../assets/favicons.js";
+    const expectedSrc = page === "index.html" ? "assets/icons/favicons.js" : "../assets/icons/favicons.js";
     assert.match(
       html,
       new RegExp(`<script src="${expectedSrc.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}"></script>`),
@@ -393,7 +393,7 @@ test("favicon config covers every page and is loaded by every page", () => {
 test("home page entry icons match each page's favicon config", () => {
   const sandbox = { window: {} };
   vm.createContext(sandbox);
-  vm.runInContext(read("assets/favicons.js"), sandbox);
+  vm.runInContext(read("assets/icons/favicons.js"), sandbox);
   const MAP = sandbox.window.Favicons.MAP;
 
   const html = read("index.html");
@@ -466,4 +466,87 @@ test("shared file input script supports directory picking", () => {
   assert.match(script, /acceptFiles\(directoryInput\.files, 'folder'\)/);
   assert.match(script, /textContent = '选择文件夹'/);
   assert.match(script, /textContent = '添加文件夹'/);
+});
+
+const SVG_SOURCE_DIRS = ["assets", "tools"];
+const SVG_SOURCE_EXTRA_FILES = ["index.html"];
+const SVG_SOURCE_SKIP_DIRS = new Set(["assets/icons", "vendor", "node_modules", "test"]);
+const SVG_SOURCE_EXTENSIONS = new Set([".html", ".css", ".js", ".mjs", ".ts"]);
+
+function listSourceFiles() {
+  const results = new Set();
+  for (const file of SVG_SOURCE_EXTRA_FILES) {
+    if (existsSync(path.join(root, file))) results.add(file);
+  }
+  const walk = (relDir) => {
+    if (SVG_SOURCE_SKIP_DIRS.has(relDir)) return;
+    const abs = path.join(root, relDir);
+    if (!existsSync(abs)) return;
+    for (const name of readdirSync(abs)) {
+      const relChild = path.posix.join(relDir, name);
+      const absChild = path.join(abs, name);
+      const stat = statSync(absChild);
+      if (stat.isDirectory()) {
+        walk(relChild);
+        continue;
+      }
+      const ext = path.extname(name);
+      if (SVG_SOURCE_EXTENSIONS.has(ext)) results.add(relChild);
+    }
+  };
+  for (const dir of SVG_SOURCE_DIRS) walk(dir);
+  return [...results].sort();
+}
+
+test("svg 资源只在 assets/icons 下定义", () => {
+  // 项目其它地方不能写 inline <svg>，也不能用 createElementNS('http://www.w3.org/2000/svg', 'svg') 动态构造，
+  // 所有 svg 资源（包括动态合成的 favicon）都收口在 assets/icons/ 下，由 .icon-{name} 通过 mask 渲染。
+  const inlineSvgPattern = /<svg\b/i;
+  const dynamicSvgPattern = /createElementNS\(\s*['"`]http:\/\/www\.w3\.org\/2000\/svg['"`]\s*,\s*['"`]svg['"`]/;
+
+  for (const file of listSourceFiles()) {
+    const content = read(file);
+    assert.doesNotMatch(
+      content,
+      inlineSvgPattern,
+      `${file} 不应包含 inline <svg>，svg 资源请放在 assets/icons/ 下并通过 .icon-{name} 使用`
+    );
+    assert.doesNotMatch(
+      content,
+      dynamicSvgPattern,
+      `${file} 不应使用 createElementNS 动态构造 <svg>，请改用 .icon-{name}`
+    );
+  }
+});
+
+test("assets/icons 下的 svg 都在 icons.html 中展示", () => {
+  const iconsDir = path.join(root, "assets/icons");
+  const svgNames = readdirSync(iconsDir)
+    .filter((name) => name.endsWith(".svg"))
+    .map((name) => name.slice(0, -".svg".length))
+    .sort();
+
+  const iconPage = read("tools/icons.html");
+  const previewPattern = /<span[^>]*class="[^"]*\bicon-preview\b[^"]*\bicon-([a-z][a-z0-9-]*)\b[^"]*"/g;
+  const shownIcons = [...iconPage.matchAll(previewPattern)].map((m) => m[1]).sort();
+
+  for (const name of svgNames) {
+    assert.ok(
+      shownIcons.includes(name),
+      `assets/icons/${name}.svg 没有在 tools/icons.html 中展示，请补一张 .icon-${name} 卡片`
+    );
+  }
+
+  for (const name of shownIcons) {
+    assert.ok(
+      svgNames.includes(name),
+      `tools/icons.html 展示了 .icon-${name}，但 assets/icons/${name}.svg 不存在`
+    );
+  }
+
+  assert.equal(
+    shownIcons.length,
+    svgNames.length,
+    `icons.html 卡片数 (${shownIcons.length}) 应该与 assets/icons 下的 svg 数 (${svgNames.length}) 一致`
+  );
 });

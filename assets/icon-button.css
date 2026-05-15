@@ -8,7 +8,13 @@
 .icon-moon::before,
 .icon-trash::before,
 .icon-close::before,
-.icon-minimize::before {
+.icon-minimize::before,
+.icon-chevron-down::before,
+.icon-menu-check::before,
+.icon-file-drop::before,
+.icon-download::before,
+.icon-compare-split::before,
+.icon-hint-info::before {
   content: "";
   display: inline-block;
   width: var(--icon-size, 1em);
@@ -31,6 +37,12 @@
 .icon-trash::before    { -webkit-mask-image: var(--icon-trash);    mask-image: var(--icon-trash); }
 .icon-close::before    { -webkit-mask-image: var(--icon-close);    mask-image: var(--icon-close); }
 .icon-minimize::before { -webkit-mask-image: var(--icon-minimize); mask-image: var(--icon-minimize); }
+.icon-chevron-down::before { -webkit-mask-image: var(--icon-chevron-down); mask-image: var(--icon-chevron-down); }
+.icon-menu-check::before   { -webkit-mask-image: var(--icon-menu-check);   mask-image: var(--icon-menu-check); }
+.icon-file-drop::before    { -webkit-mask-image: var(--icon-file-drop);    mask-image: var(--icon-file-drop); }
+.icon-download::before     { -webkit-mask-image: var(--icon-download);     mask-image: var(--icon-download); }
+.icon-compare-split::before { -webkit-mask-image: var(--icon-compare-split); mask-image: var(--icon-compare-split); }
+.icon-hint-info::before    { -webkit-mask-image: var(--icon-hint-info);    mask-image: var(--icon-hint-info); }
 
 /* 图标按钮：纯图标的方形按钮组件（头部主页/主题/清空等场景）。
    配合任意 .icon-{name} class 使用，按钮只负责"按钮的样子"，图标由 .icon-{name} 负责。 */

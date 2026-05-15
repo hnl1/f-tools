@@ -1,0 +1,83 @@
+/**
+ * 下拉单选组件样式。须在 common.css 之后引入，
+ * 以覆盖 body.tool-page 对普通 button 的全局描边/圆角/阴影。
+ */
+
+.dropdown-single__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dropdown-single__label {
+  flex: 0 1 auto;
+}
+
+.dropdown-single__chevron {
+  flex: 0 0 auto;
+  --icon-size: 14px;
+  color: var(--text-muted);
+  transition: transform var(--ft-transition);
+}
+
+.dropdown-single__trigger[aria-expanded="true"] .dropdown-single__chevron {
+  transform: rotate(180deg);
+}
+
+.dropdown-single__panel {
+  position: fixed;
+  z-index: 40;
+  display: grid;
+  gap: 0;
+  min-width: 132px;
+  padding: 4px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--tool-button-radius);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.dropdown-single__panel[hidden] {
+  display: none;
+}
+
+body.tool-page .dropdown-single__panel button:not(.icon-btn) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: var(--tool-button-padding-block) var(--tool-button-padding-inline);
+  color: var(--text);
+  font-size: var(--tool-button-font-size);
+  line-height: var(--tool-button-line-height);
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  transition: background var(--ft-transition);
+}
+
+body.tool-page .dropdown-single__panel button:not(.icon-btn):not(:disabled):hover,
+body.tool-page .dropdown-single__panel button:not(.icon-btn):focus-visible {
+  outline: 0;
+  background: var(--surface-hover);
+  border-color: transparent;
+}
+
+.dropdown-single__option-label {
+  flex: 1;
+}
+
+.dropdown-single__check {
+  flex: 0 0 auto;
+  --icon-size: 14px;
+  color: var(--accent);
+  opacity: 0;
+}
+
+.dropdown-single__option[aria-checked="true"] .dropdown-single__check {
+  opacity: 1;
+}

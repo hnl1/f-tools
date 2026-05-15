@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF 转图片版</title>
-<script src="../assets/favicons.js"></script>
+<script src="../assets/icons/favicons.js"></script>
 <script src="../assets/theme-toggle.js"></script>
 <script src="../assets/home-link.js"></script>
 <script src="../assets/clear-button.js"></script>
@@ -468,11 +468,7 @@
 <body class="tool-page">
 <div id="header-controls" hidden>
   <button class="button accent" id="download-all-btn" type="button" disabled>
-    <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="7 10 12 15 17 10"/>
-      <line x1="12" y1="15" x2="12" y2="3"/>
-    </svg>
+    <span class="button-icon icon-download" aria-hidden="true"></span>
     <span>下载全部</span>
   </button>
   <button class="button" id="add-pdf-btn" type="button">添加 PDF</button>
@@ -500,23 +496,13 @@
 
 <main>
   <div id="foreground-hint" class="foreground-hint" hidden>
-    <svg class="hint-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M12 16v-4"/>
-      <path d="M12 8h.01"/>
-    </svg>
+    <span class="hint-icon icon-hint-info" aria-hidden="true"></span>
     <span>提示：请尽量保持此页面在前台，否则浏览器可能降低处理速度。</span>
   </div>
 
   <div id="drop-hint" class="file-drop-zone" role="button" tabindex="0" aria-labelledby="pdf-to-image-drop-title">
     <input id="pdf-file" class="visually-hidden-file" type="file" accept="application/pdf,.pdf" multiple aria-label="选择 PDF 文件">
-    <div class="file-drop-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 4v12"></path>
-        <path d="m7 9 5-5 5 5"></path>
-        <path d="M5 18v2h14v-2"></path>
-      </svg>
-    </div>
+    <div class="file-drop-icon icon-file-drop" aria-hidden="true"></div>
     <div>
       <div id="pdf-to-image-drop-title" class="file-drop-title"></div>
     </div>
@@ -681,8 +667,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     updateGlobalControls();
   }
 
-  const DOWNLOAD_ICON_SVG = '<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
-  const COMPARE_ICON_SVG = '<svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>';
+  const DOWNLOAD_ICON_HTML = '<span class="button-icon icon-download" aria-hidden="true"></span>';
+  const COMPARE_ICON_HTML = '<span class="button-icon icon-compare-split" aria-hidden="true"></span>';
 
   const STATUS_LABELS = {
     pending: '排队中',
@@ -902,13 +888,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = '../vendor/pdfjs/pdf.worker.min.js';
     const downloadBtn = document.createElement('button');
     downloadBtn.className = 'button accent';
     downloadBtn.type = 'button';
-    downloadBtn.innerHTML = `${DOWNLOAD_ICON_SVG}<span>下载</span>`;
+    downloadBtn.innerHTML = `${DOWNLOAD_ICON_HTML}<span>下载</span>`;
     downloadBtn.disabled = true;
 
     const compareBtn = document.createElement('button');
     compareBtn.className = 'button';
     compareBtn.type = 'button';
-    compareBtn.innerHTML = `${COMPARE_ICON_SVG}<span>对比</span>`;
+    compareBtn.innerHTML = `${COMPARE_ICON_HTML}<span>对比</span>`;
     compareBtn.disabled = true;
 
     const deleteBtn = document.createElement('button');
